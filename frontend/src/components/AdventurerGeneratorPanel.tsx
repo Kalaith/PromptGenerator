@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
-import { adventurerRaces, raceTraits, generateAdventurerPrompt } from '../utils/adventurerGenerator';
+import { adventurerRaces, generateAdventurerPrompt } from '../utils/adventurerGenerator';
+import type { PromptsPayload } from '../types/Prompt';
 
-const AdventurerGeneratorPanel: React.FC<{ updatePrompts: (prompts: { image_prompts: { id: number; title: string; description: string; negative_prompt: string; tags: string[]; }[]; }) => void }> = ({ updatePrompts }) => {
+interface AdventurerGeneratorPanelProps {
+  updatePrompts: (prompts: PromptsPayload) => void;
+}
+
+const AdventurerGeneratorPanel: React.FC<AdventurerGeneratorPanelProps> = ({ updatePrompts }) => {
   const [race, setRace] = useState<string>('human');
   const [promptCount, setPromptCount] = useState<number>(1);
 
   const handleGenerate = () => {
-    console.log('Generating adventurer prompts with race:', race);
-    console.log('Prompt count:', promptCount);
-
-    const prompts = Array.from({ length: promptCount }, (_, index) => generateAdventurerPrompt(race));
+    const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
+    const prompts = Array.from({ length: safeCount }, () => {
+      const p = generateAdventurerPrompt(race);
+      return { ...p, id: String(p.id) };
+    });
 
     updatePrompts({ image_prompts: prompts });
   };
@@ -42,8 +48,9 @@ const AdventurerGeneratorPanel: React.FC<{ updatePrompts: (prompts: { image_prom
         <input
           id="promptCount"
           type="number"
+          min={1}
           value={promptCount}
-          onChange={(e) => setPromptCount(Number(e.target.value))}
+          onChange={(e) => setPromptCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
           className="w-full p-2 border border-gray-300 rounded-md"
         />
       </div>

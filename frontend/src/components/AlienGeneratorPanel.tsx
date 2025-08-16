@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { speciesClasses, generateAlienPrompt, artisticStyles, environments, universalTraits, climatePreferences, positiveTraitVisuals, negativeTraitVisuals, genders } from '../utils/alienGenerator';
+import type { PromptsPayload } from '../types/Prompt';
 
-const AlienGeneratorPanel: React.FC<{ updatePrompts: (prompts: { image_prompts: { id: number; title: string; description: string; negative_prompt: string; tags: string[]; }[]; }) => void }> = ({ updatePrompts }) => {
+interface AlienGeneratorPanelProps {
+  updatePrompts: (prompts: PromptsPayload) => void;
+}
+
+const AlienGeneratorPanel: React.FC<AlienGeneratorPanelProps> = ({ updatePrompts }) => {
   const [speciesClass, setSpeciesClass] = useState<string>('Humanoid');
   const [promptCount, setPromptCount] = useState<number>(1);
   const [style, setStyle] = useState<string>('random');
@@ -12,8 +17,9 @@ const AlienGeneratorPanel: React.FC<{ updatePrompts: (prompts: { image_prompts: 
   const [gender, setGender] = useState<string>('random');
 
   const handleGenerate = () => {
-    const prompts = Array.from({ length: promptCount }, () =>
-      generateAlienPrompt(
+    const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
+    const prompts = Array.from({ length: safeCount }, () => {
+      const p = generateAlienPrompt(
         speciesClass === 'random' ? undefined : speciesClass,
         climate === 'random' ? undefined : climate,
         positiveTrait === 'random' ? undefined : positiveTrait,
@@ -21,8 +27,9 @@ const AlienGeneratorPanel: React.FC<{ updatePrompts: (prompts: { image_prompts: 
         style === 'random' ? undefined : style,
         environment === 'random' ? undefined : environment,
         gender === 'random' ? undefined : gender
-      )
-    );
+      );
+      return { ...p, id: String(p.id) };
+    });
     updatePrompts({ image_prompts: prompts });
   };
 
@@ -158,8 +165,9 @@ const AlienGeneratorPanel: React.FC<{ updatePrompts: (prompts: { image_prompts: 
         <input
           id="promptCount"
           type="number"
+          min={1}
           value={promptCount}
-          onChange={(e) => setPromptCount(Number(e.target.value))}
+          onChange={(e) => setPromptCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
           className="w-full p-2 border border-gray-300 rounded-md"
         />
       </div>

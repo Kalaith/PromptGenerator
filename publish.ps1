@@ -227,6 +227,12 @@ function Publish-Frontend {
 # Install PHP backend dependencies
 function Install-BackendDependencies {
     Write-Progress "Installing PHP backend dependencies..."
+    # If backend folder doesn't exist, skip installation step (project may be frontend-only)
+    if (!(Test-Path $BACKEND_SRC)) {
+        Write-Warning "Backend source folder '$BACKEND_SRC' not found. Skipping backend dependency installation."
+        return $true
+    }
+
     Set-Location $BACKEND_SRC
     
     # Check if composer is available
@@ -251,7 +257,12 @@ function Install-BackendDependencies {
 # Publish PHP backend
 function Publish-Backend {
     Write-Progress "Publishing PHP backend..."
-    
+    # If backend folder doesn't exist, skip backend publish (keep backend functionality intact)
+    if (!(Test-Path $BACKEND_SRC)) {
+        Write-Warning "Backend source folder '$BACKEND_SRC' not found. Skipping backend publish."
+        return $true
+    }
+
     # Install dependencies
     if (!(Install-BackendDependencies)) {
         return $false

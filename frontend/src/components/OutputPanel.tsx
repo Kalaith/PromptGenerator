@@ -1,10 +1,12 @@
 import React from 'react';
+import type { PromptsPayload } from '../types/Prompt';
 
 interface OutputPanelProps {
   generatedJSON: string;
+  errors?: string[];
 }
 
-const OutputPanel: React.FC<OutputPanelProps> = ({ generatedJSON }) => {
+const OutputPanel: React.FC<OutputPanelProps> = ({ generatedJSON, errors }) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedJSON);
     alert('Copied to clipboard!');
@@ -23,6 +25,9 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ generatedJSON }) => {
   return (
     <div className="p-4 bg-gray-100 rounded-md shadow-md">
       <h2 className="text-lg font-semibold mb-4">Output Panel</h2>
+      {errors && errors.length > 0 && (
+        <div className="mb-2 text-red-600">{errors.join('; ')}</div>
+      )}
       <textarea
         value={generatedJSON}
         readOnly
