@@ -7,8 +7,8 @@ interface AdventurerGeneratorPanelProps {
 }
 
 const AdventurerGeneratorPanel: React.FC<AdventurerGeneratorPanelProps> = ({ updatePrompts }) => {
-  const [race, setRace] = useState<string>('human');
-  const [promptCount, setPromptCount] = useState<number>(1);
+  const [race, setRace] = useState<string>('random');
+  const [promptCount, setPromptCount] = useState<number>(10);
 
   const handleGenerate = () => {
     const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));

@@ -1,5 +1,5 @@
 import './styles/globals.css';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from './components/Header';
 import GeneratorPanel from './components/GeneratorPanel';
 import OutputPanel from './components/OutputPanel';
@@ -10,6 +10,11 @@ import type { PromptsPayload } from './types/Prompt';
 const App: React.FC = () => {
   const [promptsPayload, setPromptsPayload] = useState<PromptsPayload>({ image_prompts: [] });
   const [activePanel, setActivePanel] = useState<'generator' | 'adventurer' | 'alien'>('generator');
+
+  // Clear generated output when switching panels so the OutputPanel textarea resets
+  useEffect(() => {
+    setPromptsPayload({ image_prompts: [] });
+  }, [activePanel]);
 
   const updatePrompts = (payload: PromptsPayload) => {
     setPromptsPayload(payload);

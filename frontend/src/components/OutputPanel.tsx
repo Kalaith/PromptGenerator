@@ -3,7 +3,8 @@ import type { PromptsPayload } from '../types/Prompt';
 
 interface OutputPanelProps {
   generatedJSON: string;
-  errors?: string[];
+  // Accept undefined explicitly to be compatible with callers that pass maybe-undefined values
+  errors?: string[] | undefined;
 }
 
 const OutputPanel: React.FC<OutputPanelProps> = ({ generatedJSON, errors }) => {

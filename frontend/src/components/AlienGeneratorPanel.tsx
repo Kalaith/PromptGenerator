@@ -7,8 +7,8 @@ interface AlienGeneratorPanelProps {
 }
 
 const AlienGeneratorPanel: React.FC<AlienGeneratorPanelProps> = ({ updatePrompts }) => {
-  const [speciesClass, setSpeciesClass] = useState<string>('Humanoid');
-  const [promptCount, setPromptCount] = useState<number>(1);
+  const [speciesClass, setSpeciesClass] = useState<string>('random');
+  const [promptCount, setPromptCount] = useState<number>(10);
   const [style, setStyle] = useState<string>('random');
   const [environment, setEnvironment] = useState<string>('random');
   const [climate, setClimate] = useState<string>('random');

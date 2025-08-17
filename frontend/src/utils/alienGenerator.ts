@@ -197,7 +197,8 @@ export const negativeTraitVisuals = {
 };
 
 // Utility functions
-export const getRandomElement = <T>(array: T[]): T => {
+export const getRandomElement = <T>(array: T[] | undefined): T | undefined => {
+  if (!array || array.length === 0) return undefined;
   return array[Math.floor(Math.random() * array.length)];
 };
 
@@ -222,32 +223,34 @@ export const generateAlienPrompt = (
   negative_prompt: string;
   tags: string[];
 } => {
-  // Select species class
-  const selectedClass = speciesClass || getRandomElement(speciesClasses);
+  // Select species class (ensure a string fallback)
+  const selectedClass: string = String(speciesClass ?? getRandomElement(speciesClasses) ?? speciesClasses[0]);
   const classData = speciesTraits[selectedClass as keyof typeof speciesTraits];
 
   // Climate preference
   let selectedClimate = climate;
   if (!selectedClimate) {
-    const pref = getRandomElement(climatePreferences);
-    selectedClimate = getRandomElement(pref.types);
+    const pref = getRandomElement(climatePreferences) ?? climatePreferences[0]!;
+    selectedClimate = getRandomElement(pref.types) ?? pref.types[0]!;
   }
 
   // Gender selection
-  const selectedGender = gender || getRandomElement(genders);
+  const selectedGender = gender ?? getRandomElement(genders) ?? genders[0];
 
-  // Traits
-  const posTrait = positiveTrait || getRandomElement(universalTraits.positive).name;
-  const negTrait = negativeTrait || getRandomElement(universalTraits.negative).name;
+  // Traits (with fallbacks)
+  const posCandidate = getRandomElement(universalTraits.positive);
+  const negCandidate = getRandomElement(universalTraits.negative);
+  const posTrait = positiveTrait ?? (posCandidate ? posCandidate.name : universalTraits.positive[0]!.name);
+  const negTrait = negativeTrait ?? (negCandidate ? negCandidate.name : universalTraits.negative[0]!.name);
 
   // Artistic style
-  const selectedStyle = style || getRandomElement(artisticStyles);
+  const selectedStyle = style ?? getRandomElement(artisticStyles) ?? artisticStyles[0];
 
   // Environment
-  const selectedEnvironment = environment || getRandomElement(environments);
+  const selectedEnvironment = environment ?? getRandomElement(environments) ?? environments[0];
 
   // Cultural artifact
-  const selectedArtifact = getRandomElement(culturalArtifacts);
+  const selectedArtifact = getRandomElement(culturalArtifacts) ?? culturalArtifacts[0];
 
   // Add shared attributes for more detail (declare outside to use in tags)
   // Adapt attributes based on species type
@@ -255,49 +258,49 @@ export const generateAlienPrompt = (
   
   if (['Humanoid', 'Mammalian', 'Necroid'].includes(selectedClass)) {
     // Species that can have traditional hair
-    selectedHairColor = getRandomElement(hairColors);
-    selectedHairStyle = getRandomElement(hairStyles);
+  selectedHairColor = getRandomElement(hairColors) ?? 'natural';
+  selectedHairStyle = getRandomElement(hairStyles) ?? 'standard';
   } else if (['Avian'].includes(selectedClass)) {
     // Feathered species - adapt hair to feathers
-    selectedHairColor = getRandomElement(hairColors);
-    selectedHairStyle = 'feathered crest';
+  selectedHairColor = getRandomElement(hairColors) ?? 'natural';
+  selectedHairStyle = 'feathered crest';
   } else if (['Plantoid'].includes(selectedClass)) {
     // Plant species - adapt to leaves/petals
-    selectedHairColor = getRandomElement(['green', 'brown', 'yellow', 'red', 'orange']);
-    selectedHairStyle = 'leaf-like fronds';
+  selectedHairColor = getRandomElement(['green', 'brown', 'yellow', 'red', 'orange']) ?? 'green';
+  selectedHairStyle = 'leaf-like fronds';
   } else if (['Machine'].includes(selectedClass)) {
     // Mechanical species - no traditional hair
-    selectedHairColor = 'metallic';
-    selectedHairStyle = 'synthetic fibers';
+  selectedHairColor = 'metallic';
+  selectedHairStyle = 'synthetic fibers';
   } else {
     // Other species - more exotic options
-    selectedHairColor = getRandomElement(['iridescent', 'bioluminescent', 'crystalline', 'ethereal']);
-    selectedHairStyle = 'alien appendages';
+  selectedHairColor = getRandomElement(['iridescent', 'bioluminescent', 'crystalline', 'ethereal']) ?? 'iridescent';
+  selectedHairStyle = 'alien appendages';
   }
   
-  selectedEyeColor = getRandomElement(eyeColors);
-  selectedClothing = getRandomElement(clothingItems);
-  selectedAccessory = getRandomElement(accessories);
-  const selectedFacialFeature = getRandomElement(facialFeatures);
-  const selectedPose = getRandomElement(poses);
-  const selectedEyeExpression = getRandomElement(eyeExpressions);
-  const selectedBackground = getRandomElement(backgrounds);
+  selectedEyeColor = getRandomElement(eyeColors) ?? 'brown';
+  selectedClothing = getRandomElement(clothingItems) ?? 'standard clothing';
+  selectedAccessory = getRandomElement(accessories) ?? 'none';
+  const selectedFacialFeature = getRandomElement(facialFeatures) ?? 'neutral expression';
+  const selectedPose = getRandomElement(poses) ?? 'stands';
+  const selectedEyeExpression = getRandomElement(eyeExpressions) ?? 'neutral gaze';
+  const selectedBackground = getRandomElement(backgrounds) ?? 'neutral background';
 
   // Description template
   let description = '';
   if (classData) {
     const visualDetails = getRandomElements(classData.physical_characteristics.visual_descriptors, 2).join(', ');
-    const variation = classData.physical_characteristics.variations.length > 0 
-      ? getRandomElement(classData.physical_characteristics.variations)
+    const variation = classData.physical_characteristics.variations.length > 0
+      ? getRandomElement(classData.physical_characteristics.variations) ?? classData.physical_characteristics.variations[0]
       : 'standard';
     
     // Create a more image-focused description
-    const posTraitVisual = positiveTraitVisuals[posTrait as keyof typeof positiveTraitVisuals] 
-      ? getRandomElement(positiveTraitVisuals[posTrait as keyof typeof positiveTraitVisuals])
+    const posTraitVisual = positiveTraitVisuals[posTrait as keyof typeof positiveTraitVisuals]
+      ? getRandomElement(positiveTraitVisuals[posTrait as keyof typeof positiveTraitVisuals]) ?? 'with a confident bearing'
       : 'with a confident bearing';
-    
+
     const negTraitVisual = negativeTraitVisuals[negTrait as keyof typeof negativeTraitVisuals]
-      ? getRandomElement(negativeTraitVisuals[negTrait as keyof typeof negativeTraitVisuals])
+      ? getRandomElement(negativeTraitVisuals[negTrait as keyof typeof negativeTraitVisuals]) ?? 'with subtle imperfections'
       : 'with subtle imperfections';
     
     description = `Portrait of a ${selectedGender} ${selectedClass} alien from a ${selectedClimate} world, depicted in a ${selectedStyle} style. ${variation} variation. Physical features: ${getRandomElements(classData.physical_characteristics.features, 2).join(', ')}. Hair: ${selectedHairStyle} ${selectedHairColor} hair. Eyes: ${selectedEyeColor} eyes that ${selectedEyeExpression}. Facial features include ${selectedFacialFeature}. Wearing ${selectedClothing} with ${selectedAccessory}. Visual details: ${visualDetails}. The alien ${posTraitVisual} and ${negTraitVisual}, ${selectedPose} in ${selectedBackground}. Holding a ${selectedArtifact}. Style elements: ${classData.ai_prompt_elements}.`;
@@ -314,7 +317,19 @@ export const generateAlienPrompt = (
     title: `${selectedClass} Alien (${selectedClimate} World, ${selectedStyle})`,
     description,
     negative_prompt: negativePrompt,
-    tags: [selectedClass, selectedClimate, posTrait, negTrait, selectedStyle, selectedEnvironment, selectedArtifact, selectedGender, selectedHairColor, selectedEyeColor, selectedClothing]
+    tags: [
+      String(selectedClass),
+      String(selectedClimate),
+      String(posTrait),
+      String(negTrait),
+      String(selectedStyle),
+      String(selectedEnvironment),
+      String(selectedArtifact),
+      String(selectedGender),
+      String(selectedHairColor),
+      String(selectedEyeColor),
+      String(selectedClothing)
+    ]
   };
 };
 

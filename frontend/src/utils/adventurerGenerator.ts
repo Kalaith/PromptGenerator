@@ -1,4 +1,6 @@
 import { hairColors, hairStyles, eyeColors, backgrounds, eyeExpressions, facialFeatures, poses } from './sharedAttributes';
+import { pickOne, pickMany, randomInt } from './rng';
+import { getId } from './id';
 
 export const adventurerRaces = [
   'dragonkin', 'dwarf', 'elf', 'goblin', 'halfling', 'human', 'orc', 'tiefling',
@@ -212,14 +214,9 @@ export const adventurerClasses = [
 export const experienceLevels = ['low', 'mid', 'high'];
 
 // Utility functions for generating content
-export const getRandomElement = <T>(array: T[]): T => {
-  return array[Math.floor(Math.random() * array.length)];
-};
+export const getRandomElement = <T>(array: T[]): T | undefined => pickOne(array);
 
-export const getRandomElements = <T>(array: T[], count: number): T[] => {
-  const shuffled = [...array].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, Math.min(count, array.length));
-};
+export const getRandomElements = <T>(array: T[], count: number): T[] => pickMany(array, count);
 
 // Enhanced generation function
 export const generateAdventurerPrompt = (
@@ -227,46 +224,46 @@ export const generateAdventurerPrompt = (
   adventurerClass?: string, 
   experience?: string
 ): {
-  id: number;
+  id: string;
   title: string;
   description: string;
   negative_prompt: string;
   tags: string[];
 } => {
   // Handle random race
-  const selectedRace = race === 'random' ? getRandomElement(adventurerRaces) : race || getRandomElement(adventurerRaces);
-  const selectedClass = adventurerClass || getRandomElement(adventurerClasses);
-  const selectedExperience = experience || getRandomElement(experienceLevels);
+  const selectedRace = race === 'random' ? (getRandomElement(adventurerRaces) as string) : race || (getRandomElement(adventurerRaces) as string);
+  const selectedClass = (adventurerClass || (getRandomElement(adventurerClasses) as string)) as string;
+  const selectedExperience = (experience || (getRandomElement(experienceLevels) as string)) as string;
 
   // Get equipment for this class/experience
   const equipment = classEquipment[selectedClass as keyof typeof classEquipment][selectedExperience as keyof typeof classEquipment['warrior']];
   const selectedEquipment = [
-    getRandomElement(equipment.armor),
-    getRandomElement(equipment.weapons),
-    getRandomElement(equipment.accessories)
+    getRandomElement(equipment.armor) || '',
+    getRandomElement(equipment.weapons) || '',
+    getRandomElement(equipment.accessories) || ''
   ].join(', ');
 
   // Generate other elements
-  const hairColor = getRandomElement(hairColors);
-  const hairStyle = getRandomElement(hairStyles);
-  const eyeColor = getRandomElement(eyeColors);
-  const eyeExpression = getRandomElement(eyeExpressions);
-  const background = getRandomElement(backgrounds);
-  const facialFeature = getRandomElements(facialFeatures, Math.floor(Math.random() * 3) + 1).join(', ');
-  const pose = getRandomElement(poses);
+  const hairColor = getRandomElement(hairColors) || '';
+  const hairStyle = getRandomElement(hairStyles) || '';
+  const eyeColor = getRandomElement(eyeColors) || '';
+  const eyeExpression = getRandomElement(eyeExpressions) || '';
+  const background = getRandomElement(backgrounds) || '';
+  const facialFeature = getRandomElements(facialFeatures, randomInt(1, 3)).join(', ');
+  const pose = getRandomElement(poses) || '';
 
   // Add race-specific features if available
   let raceFeatures = '';
   if (raceTraits[selectedRace as keyof typeof raceTraits]) {
     const traits = raceTraits[selectedRace as keyof typeof raceTraits];
     if (traits.features) {
-      const selectedFeatures = getRandomElements(traits.features, Math.floor(Math.random() * 2) + 1);
+      const selectedFeatures = getRandomElements(traits.features, randomInt(1, 2));
       raceFeatures = `She has distinctive ${selectedFeatures.join(' and ')}.`;
     }
   }
 
   // Select and fill template
-  const template = getRandomElement(descriptionTemplates);
+  const template = getRandomElement(descriptionTemplates) || '';
   const description = template
     .replace('{experience}', selectedExperience)
     .replace('{race}', selectedRace)
@@ -285,7 +282,7 @@ export const generateAdventurerPrompt = (
   const negativePrompt = Object.values(negativePrompts).join(', ');
 
   return {
-    id: Date.now(),
+    id: getId(),
     title: `${selectedExperience.charAt(0).toUpperCase() + selectedExperience.slice(1)} ${selectedRace.charAt(0).toUpperCase() + selectedRace.slice(1)} ${selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1)}`,
     description,
     negative_prompt: negativePrompt,

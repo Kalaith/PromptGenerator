@@ -19,19 +19,21 @@ interface GeneratorPanelProps {
 }
 
 const GeneratorPanel: React.FC<GeneratorPanelProps> = ({ updatePrompts }) => {
-  const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl'>('animalGirl');
-  const [species, setSpecies] = useState<string>(() => {
-    const defaultData = dataSources['animalGirl'];
-    return Object.keys(defaultData)[0] ?? 'random';
-  });
-  const [promptCount, setPromptCount] = useState<number>(1);
+  const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');
+  const [species, setSpecies] = useState<string>(() => 'random');
+  const [promptCount, setPromptCount] = useState<number>(10);
   const [error, setError] = useState<string | null>(null);
 
-  const data = dataSources[type];
+  const data = type === 'random' ? undefined : dataSources[type as keyof typeof dataSources];
 
   useEffect(() => {
-    // When the type changes, pick the first available species for that type
-    const defaultSpecies = Object.keys(data)[0] ?? 'random';
+    // When the type changes, set species to 'random' unless a concrete type is chosen
+    if (type === 'random') {
+      setSpecies('random');
+      return;
+    }
+
+    const defaultSpecies = Object.keys(dataSources[type as keyof typeof dataSources] || {})[0] ?? 'random';
     setSpecies(defaultSpecies);
   }, [type]);
 
@@ -56,9 +58,10 @@ const GeneratorPanel: React.FC<GeneratorPanelProps> = ({ updatePrompts }) => {
         <select
           id="type"
           value={type}
-          onChange={(e) => setType(e.target.value as any)}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value as 'animalGirl' | 'monster' | 'monsterGirl' | 'random')}
           className="w-full p-2 border border-gray-300 rounded-md"
         >
+          <option key="random" value="random">Random</option>
           {Object.keys(dataSources).map((key) => (
             <option key={key} value={key}>
               {key.charAt(0).toUpperCase() + key.slice(1)}
@@ -76,14 +79,14 @@ const GeneratorPanel: React.FC<GeneratorPanelProps> = ({ updatePrompts }) => {
           onChange={(e) => setSpecies(e.target.value)}
           className="w-full p-2 border border-gray-300 rounded-md"
         >
-          <option key="random" value="random">
-            Random
-          </option>
-          {Object.keys(data).map((key) => (
-            <option key={key} value={key}>
-              {`${key} - ${data[key].species.charAt(0).toUpperCase() + data[key].species.slice(1)}`}
-            </option>
-          ))}
+            <option key="random" value="random">Random</option>
+            {Object.keys(data || {}).map((key) => (
+              <option key={key} value={key}>
+                {data && data[key]
+                  ? `${key} - ${data[key].species.charAt(0).toUpperCase() + data[key].species.slice(1)}`
+                  : key}
+              </option>
+            ))}
         </select>
       </div>
       <div className="mb-4">
