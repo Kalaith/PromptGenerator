@@ -1,37 +1,33 @@
 import './styles/globals.css';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Header from './components/Header';
 import GeneratorPanel from './components/GeneratorPanel';
 import OutputPanel from './components/OutputPanel';
 import AdventurerGeneratorPanel from './components/AdventurerGeneratorPanel';
 import AlienGeneratorPanel from './components/AlienGeneratorPanel';
-import type { PromptsPayload } from './types/Prompt';
+import { usePromptStore } from './stores/promptStore';
 
 const App: React.FC = () => {
-  const [promptsPayload, setPromptsPayload] = useState<PromptsPayload>({ image_prompts: [] });
   const [activePanel, setActivePanel] = useState<'generator' | 'adventurer' | 'alien'>('generator');
+  const clearAll = usePromptStore((state) => state.clearAll);
 
-  // Clear generated output when switching panels so the OutputPanel textarea resets
-  useEffect(() => {
-    setPromptsPayload({ image_prompts: [] });
-  }, [activePanel]);
-
-  const updatePrompts = (payload: PromptsPayload) => {
-    setPromptsPayload(payload);
+  const handlePanelChange = (panel: 'generator' | 'adventurer' | 'alien') => {
+    clearAll(); // Clear generated output when switching panels
+    setActivePanel(panel);
   };
 
   return (
     <div className="min-h-screen bg-amber-50 text-slate-800">
-      <Header setActivePanel={setActivePanel} />
+      <Header setActivePanel={handlePanelChange} />
       <main className="main-content">
         {activePanel === 'generator' ? (
-          <GeneratorPanel updatePrompts={updatePrompts} />
+          <GeneratorPanel />
         ) : activePanel === 'adventurer' ? (
-          <AdventurerGeneratorPanel updatePrompts={updatePrompts} />
+          <AdventurerGeneratorPanel />
         ) : (
-          <AlienGeneratorPanel updatePrompts={updatePrompts} />
+          <AlienGeneratorPanel />
         )}
-        <OutputPanel generatedJSON={JSON.stringify(promptsPayload.image_prompts, null, 2)} errors={promptsPayload.errors} />
+        <OutputPanel />
       </main>
     </div>
   );

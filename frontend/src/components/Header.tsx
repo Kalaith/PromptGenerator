@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 const Header: React.FC<{ setActivePanel: (panel: 'generator' | 'adventurer' | 'alien') => void }> = ({ setActivePanel }) => {
   return (

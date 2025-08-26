@@ -4,7 +4,7 @@ import { monsterData } from '../utils/monsterData';
 import { monsterGirlData } from '../utils/monsterGirlData';
 import { generatePrompts } from '../utils/promptGenerator';
 import { SpeciesData } from '../types/SpeciesData';
-import type { PromptsPayload } from '../types/Prompt';
+import { usePromptStore } from '../stores/promptStore';
 
 type DataSources = Record<string, Record<string, SpeciesData>>;
 
@@ -14,15 +14,13 @@ const dataSources: DataSources = {
   monsterGirl: monsterGirlData,
 };
 
-interface GeneratorPanelProps {
-  updatePrompts: (prompts: PromptsPayload) => void;
-}
-
-const GeneratorPanel: React.FC<GeneratorPanelProps> = ({ updatePrompts }) => {
+const GeneratorPanel: React.FC = () => {
   const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');
   const [species, setSpecies] = useState<string>(() => 'random');
   const [promptCount, setPromptCount] = useState<number>(10);
   const [error, setError] = useState<string | null>(null);
+  
+  const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
 
   const data = type === 'random' ? undefined : dataSources[type as keyof typeof dataSources];
 
@@ -44,7 +42,10 @@ const GeneratorPanel: React.FC<GeneratorPanelProps> = ({ updatePrompts }) => {
     if (result.errors && result.errors.length) {
       setError(result.errors.join('; '));
     }
-    updatePrompts(result);
+    
+    if (result.image_prompts && result.image_prompts.length > 0) {
+      addGeneratedPrompts(result.image_prompts);
+    }
   };
 
   return (

@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import { speciesClasses, generateAlienPrompt, artisticStyles, environments, universalTraits, climatePreferences, positiveTraitVisuals, negativeTraitVisuals, genders } from '../utils/alienGenerator';
-import type { PromptsPayload } from '../types/Prompt';
+import { usePromptStore } from '../stores/promptStore';
 
-interface AlienGeneratorPanelProps {
-  updatePrompts: (prompts: PromptsPayload) => void;
-}
-
-const AlienGeneratorPanel: React.FC<AlienGeneratorPanelProps> = ({ updatePrompts }) => {
+const AlienGeneratorPanel: React.FC = () => {
   const [speciesClass, setSpeciesClass] = useState<string>('random');
   const [promptCount, setPromptCount] = useState<number>(10);
   const [style, setStyle] = useState<string>('random');
@@ -15,6 +11,8 @@ const AlienGeneratorPanel: React.FC<AlienGeneratorPanelProps> = ({ updatePrompts
   const [positiveTrait, setPositiveTrait] = useState<string>('random');
   const [negativeTrait, setNegativeTrait] = useState<string>('random');
   const [gender, setGender] = useState<string>('random');
+  
+  const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
 
   const handleGenerate = () => {
     const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
@@ -30,7 +28,8 @@ const AlienGeneratorPanel: React.FC<AlienGeneratorPanelProps> = ({ updatePrompts
       );
       return { ...p, id: String(p.id) };
     });
-    updatePrompts({ image_prompts: prompts });
+    
+    addGeneratedPrompts(prompts);
   };
 
   return (

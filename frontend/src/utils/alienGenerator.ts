@@ -254,7 +254,7 @@ export const generateAlienPrompt = (
 
   // Add shared attributes for more detail (declare outside to use in tags)
   // Adapt attributes based on species type
-  let selectedHairColor, selectedHairStyle, selectedEyeColor, selectedClothing, selectedAccessory;
+  let selectedHairColor, selectedHairStyle;
   
   if (['Humanoid', 'Mammalian', 'Necroid'].includes(selectedClass)) {
     // Species that can have traditional hair
@@ -278,9 +278,9 @@ export const generateAlienPrompt = (
   selectedHairStyle = 'alien appendages';
   }
   
-  selectedEyeColor = getRandomElement(eyeColors) ?? 'brown';
-  selectedClothing = getRandomElement(clothingItems) ?? 'standard clothing';
-  selectedAccessory = getRandomElement(accessories) ?? 'none';
+  const selectedEyeColor = getRandomElement(eyeColors) ?? 'brown';
+  const selectedClothing = getRandomElement(clothingItems) ?? 'standard clothing';
+  const selectedAccessory = getRandomElement(accessories) ?? 'none';
   const selectedFacialFeature = getRandomElement(facialFeatures) ?? 'neutral expression';
   const selectedPose = getRandomElement(poses) ?? 'stands';
   const selectedEyeExpression = getRandomElement(eyeExpressions) ?? 'neutral gaze';

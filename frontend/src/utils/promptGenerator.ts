@@ -4,8 +4,6 @@ import { monsterData } from './monsterData';
 import { monsterGirlData } from './monsterGirlData';
 import { SpeciesData } from '../types/SpeciesData';
 import type { PromptsPayload, Prompt } from '../types/Prompt';
-import { pickOne, pickMany, randomInt } from './rng';
-import { getId } from './id';
 
 type DataSource = Record<string, SpeciesData>;
 
@@ -24,13 +22,11 @@ const getDataSource = (type: string): DataSource | null => {
 
 const getRandomSpecies = (data: DataSource): string => {
   const speciesKeys = Object.keys(data);
-  return (pickOne(speciesKeys) as string) || '';
+  return speciesKeys[Math.floor(Math.random() * speciesKeys.length)];
 };
 
 export const generatePrompts = (count: number, type: string, species: string | null): PromptsPayload => {
-  // If caller requests a random type, pick one of the available types once for this generation
-  const effectiveType = type === 'random' ? (pickOne(['animalGirl', 'monster', 'monsterGirl']) as string) : type;
-  const data = getDataSource(effectiveType);
+  const data = getDataSource(type);
   const errors: string[] = [];
 
   if (!data) {
@@ -42,7 +38,7 @@ export const generatePrompts = (count: number, type: string, species: string | n
   const image_prompts: Prompt[] = [];
 
   for (let i = 0; i < safeCount; i++) {
-  const selectedSpecies = species === 'random' ? getRandomSpecies(data) : species || getRandomSpecies(data);
+    const selectedSpecies = species === 'random' ? getRandomSpecies(data) : species || getRandomSpecies(data);
     const speciesInfo = data[selectedSpecies];
 
     if (!speciesInfo) {
@@ -50,16 +46,16 @@ export const generatePrompts = (count: number, type: string, species: string | n
       continue;
     }
 
-  const hairColor = (pickOne(hairColors) as string) || '';
-  const eyeColor = (pickOne(eyeColors) as string) || '';
-  const background = (pickOne(backgrounds) as string) || '';
-  const features = speciesInfo.features && speciesInfo.features.length ? pickMany(speciesInfo.features, randomInt(1, Math.max(1, speciesInfo.features.length))) : [];
-  const personality = speciesInfo.personality && speciesInfo.personality.length ? pickMany(speciesInfo.personality, randomInt(1, 2)) : [];
-  const clothing = type === 'animalGirl' ? ((pickOne(clothingItems) as string) || '') : '';
-  const hairStyle = (pickOne(hairStyles) as string) || '';
-  const pose = (pickOne(poses) as string) || '';
-  const eyeExpression = (pickOne(eyeExpressions) as string) || '';
-  const accessory = Math.random() < 0.5 ? ((pickOne(accessories) as string) || '') : '';
+    const hairColor = getRandomElement(hairColors);
+    const eyeColor = getRandomElement(eyeColors);
+    const background = getRandomElement(backgrounds);
+    const features = speciesInfo.features && speciesInfo.features.length ? getRandomElements(speciesInfo.features, Math.floor(Math.random() * speciesInfo.features.length) + 1) : [];
+    const personality = speciesInfo.personality && speciesInfo.personality.length ? getRandomElements(speciesInfo.personality, Math.floor(Math.random() * 2) + 1) : [];
+    const clothing = type === 'animalGirl' ? getRandomElement(clothingItems) : '';
+    const hairStyle = getRandomElement(hairStyles);
+    const pose = getRandomElement(poses);
+    const eyeExpression = getRandomElement(eyeExpressions);
+    const accessory = Math.random() < 0.5 ? getRandomElement(accessories) : '';
 
     const description = (speciesInfo.descriptionTemplate || '')
       .replace('{personality}', personality.join(' and ') || '')
@@ -78,7 +74,7 @@ export const generatePrompts = (count: number, type: string, species: string | n
       .replace('{accessories}', accessory ? ' while wearing ' + accessory : '');
 
     const prompt: Prompt = {
-      id: getId(),
+      id: typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function' ? (crypto as any).randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 100000)}`,
       title: `${selectedSpecies} Character ${i + 1}`,
       description,
       negative_prompt: speciesInfo.negative_prompt,
@@ -91,3 +87,12 @@ export const generatePrompts = (count: number, type: string, species: string | n
   return { image_prompts, ...(errors.length ? { errors } : {}) };
 };
 
+const getRandomElement = (array: string[]) => {
+  return array && array.length ? array[Math.floor(Math.random() * array.length)] : '';
+};
+
+const getRandomElements = (array: string[], count: number) => {
+  if (!array || !array.length) return [];
+  const shuffled = [...array].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.max(0, count));
+};

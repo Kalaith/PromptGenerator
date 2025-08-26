@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { adventurerRaces, generateAdventurerPrompt } from '../utils/adventurerGenerator';
-import type { PromptsPayload } from '../types/Prompt';
+import { usePromptStore } from '../stores/promptStore';
 
-interface AdventurerGeneratorPanelProps {
-  updatePrompts: (prompts: PromptsPayload) => void;
-}
-
-const AdventurerGeneratorPanel: React.FC<AdventurerGeneratorPanelProps> = ({ updatePrompts }) => {
+const AdventurerGeneratorPanel: React.FC = () => {
   const [race, setRace] = useState<string>('random');
   const [promptCount, setPromptCount] = useState<number>(10);
+  
+  const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
 
   const handleGenerate = () => {
     const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
@@ -17,7 +15,7 @@ const AdventurerGeneratorPanel: React.FC<AdventurerGeneratorPanelProps> = ({ upd
       return { ...p, id: String(p.id) };
     });
 
-    updatePrompts({ image_prompts: prompts });
+    addGeneratedPrompts(prompts);
   };
 
   return (

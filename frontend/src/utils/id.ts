@@ -6,7 +6,7 @@ export function getId(): string {
     if (maybeCrypto && typeof maybeCrypto.randomUUID === 'function') {
       return maybeCrypto.randomUUID();
     }
-  } catch (e) {
+  } catch {
     // ignore and fall through to fallback
   }
 
