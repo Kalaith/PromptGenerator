@@ -4,6 +4,7 @@ import { monsterData } from './monsterData';
 import { monsterGirlData } from './monsterGirlData';
 import { SpeciesData } from '../types/SpeciesData';
 import type { PromptsPayload, Prompt } from '../types/Prompt';
+import { getId } from './id';
 
 type DataSource = Record<string, SpeciesData>;
 
@@ -22,15 +23,22 @@ const getDataSource = (type: string): DataSource | null => {
 
 const getRandomSpecies = (data: DataSource): string => {
   const speciesKeys = Object.keys(data);
-  return speciesKeys[Math.floor(Math.random() * speciesKeys.length)];
+  return speciesKeys[Math.floor(Math.random() * speciesKeys.length)] ?? 'default';
 };
 
 export const generatePrompts = (count: number, type: string, species: string | null): PromptsPayload => {
-  const data = getDataSource(type);
+  // Handle random type selection
+  let actualType = type;
+  if (type === 'random') {
+    const availableTypes = ['animalGirl', 'monster', 'monsterGirl'];
+    actualType = availableTypes[Math.floor(Math.random() * availableTypes.length)] ?? 'animalGirl';
+  }
+  
+  const data = getDataSource(actualType);
   const errors: string[] = [];
 
   if (!data) {
-    errors.push(`Unknown type: ${type}`);
+    errors.push(`Unknown type: ${actualType}`);
     return { image_prompts: [], errors };
   }
 
@@ -42,7 +50,7 @@ export const generatePrompts = (count: number, type: string, species: string | n
     const speciesInfo = data[selectedSpecies];
 
     if (!speciesInfo) {
-      errors.push(`Species "${selectedSpecies}" not found for type "${type}"`);
+      errors.push(`Species "${selectedSpecies}" not found for type "${actualType}"`);
       continue;
     }
 
@@ -51,7 +59,7 @@ export const generatePrompts = (count: number, type: string, species: string | n
     const background = getRandomElement(backgrounds);
     const features = speciesInfo.features && speciesInfo.features.length ? getRandomElements(speciesInfo.features, Math.floor(Math.random() * speciesInfo.features.length) + 1) : [];
     const personality = speciesInfo.personality && speciesInfo.personality.length ? getRandomElements(speciesInfo.personality, Math.floor(Math.random() * 2) + 1) : [];
-    const clothing = type === 'animalGirl' ? getRandomElement(clothingItems) : '';
+    const clothing = actualType === 'animalGirl' ? getRandomElement(clothingItems) : '';
     const hairStyle = getRandomElement(hairStyles);
     const pose = getRandomElement(poses);
     const eyeExpression = getRandomElement(eyeExpressions);
@@ -74,7 +82,7 @@ export const generatePrompts = (count: number, type: string, species: string | n
       .replace('{accessories}', accessory ? ' while wearing ' + accessory : '');
 
     const prompt: Prompt = {
-      id: typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function' ? (crypto as any).randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+      id: getId(),
       title: `${selectedSpecies} Character ${i + 1}`,
       description,
       negative_prompt: speciesInfo.negative_prompt,
