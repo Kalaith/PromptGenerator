@@ -21,7 +21,7 @@
 
     /* Module resolution */
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -39,9 +39,9 @@
     /* Iteration helpers */
     "downlevelIteration": true,
 
-    /* Type safety in JS interop (optional but recommended if you don’t use JS files) */
+    /* Type safety in JS interop (optional but recommended if you don't use JS files) */
     "allowJs": false,
-    "skipLibCheck": false
+    "skipLibCheck": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

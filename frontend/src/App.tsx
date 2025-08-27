@@ -1,35 +1,27 @@
 import './styles/globals.css';
-import React, { useState } from 'react';
-import Header from './components/Header';
-import GeneratorPanel from './components/GeneratorPanel';
-import OutputPanel from './components/OutputPanel';
-import AdventurerGeneratorPanel from './components/AdventurerGeneratorPanel';
-import AlienGeneratorPanel from './components/AlienGeneratorPanel';
-import { usePromptStore } from './stores/promptStore';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import RouterHeader from './components/RouterHeader';
+import AnimeGeneratorPage from './pages/AnimeGeneratorPage';
+import AdventurerGeneratorPage from './pages/AdventurerGeneratorPage';
+import AlienGeneratorPage from './pages/AlienGeneratorPage';
 
 const App: React.FC = () => {
-  const [activePanel, setActivePanel] = useState<'generator' | 'adventurer' | 'alien'>('generator');
-  const clearAll = usePromptStore((state) => state.clearAll);
-
-  const handlePanelChange = (panel: 'generator' | 'adventurer' | 'alien') => {
-    clearAll(); // Clear generated output when switching panels
-    setActivePanel(panel);
-  };
-
   return (
-    <div className="min-h-screen bg-amber-50 text-slate-800">
-      <Header setActivePanel={handlePanelChange} />
-      <main className="main-content">
-        {activePanel === 'generator' ? (
-          <GeneratorPanel />
-        ) : activePanel === 'adventurer' ? (
-          <AdventurerGeneratorPanel />
-        ) : (
-          <AlienGeneratorPanel />
-        )}
-        <OutputPanel />
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-amber-50 text-slate-800">
+        <RouterHeader />
+        <main>
+          <Routes>
+            <Route path="/" element={<Navigate to="/anime" replace />} />
+            <Route path="/anime" element={<AnimeGeneratorPage />} />
+            <Route path="/adventurer" element={<AdventurerGeneratorPage />} />
+            <Route path="/alien" element={<AlienGeneratorPage />} />
+            <Route path="*" element={<Navigate to="/anime" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 };
 
