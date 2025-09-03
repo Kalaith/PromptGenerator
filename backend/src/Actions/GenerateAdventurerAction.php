@@ -12,19 +12,29 @@ final class GenerateAdventurerAction
         private readonly AdventurerGenerationService $adventurerGenerationService
     ) {}
 
-    public function execute(?string $race = null, ?string $className = null, ?string $experience = null): array
-    {
-        // Validation
-        if ($race !== null && !in_array($race, ['random', 'dragonkin', 'dwarf', 'elf', 'goblin', 'halfling', 'human', 'orc', 'tiefling', 'half-elf', 'gnome', 'half-orc', 'aasimar', 'genasi', 'tabaxi', 'kenku', 'lizardfolk'])) {
-            throw new \InvalidArgumentException('Invalid race specified');
-        }
-
-        if ($experience !== null && !in_array($experience, ['low', 'mid', 'high'])) {
+    public function execute(
+        ?string $race = null, 
+        ?string $className = null, 
+        ?string $experience = null, 
+        ?string $gender = null, 
+        ?string $style = null, 
+        ?string $environment = null,
+        ?string $hairColor = null,
+        ?string $skinColor = null, 
+        ?string $eyeColor = null,
+        ?string $eyeStyle = null,
+        ?string $templateId = null
+    ): array {
+        // Basic validation - let service handle detailed validation
+        if ($experience !== null && !in_array($experience, ['low', 'mid', 'high', 'random'])) {
             throw new \InvalidArgumentException('Invalid experience level specified');
         }
 
         try {
-            $adventurerData = $this->adventurerGenerationService->generateAdventurerPrompt($race, $className, $experience);
+            $adventurerData = $this->adventurerGenerationService->generatePromptData(
+                $race, $className, $experience, $gender, $style, $environment,
+                $hairColor, $skinColor, $eyeColor, $eyeStyle, $templateId
+            );
             
             return [
                 'id' => uniqid(),

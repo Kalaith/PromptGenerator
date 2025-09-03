@@ -1,38 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi } from '../api';
+import { useAdventurerOptions } from '../hooks/useAdventurerOptions';
+import { useAdventurerForm } from '../hooks/useAdventurerForm';
 import { APP_CONSTANTS } from '../constants/app';
 import { ValidationUtils } from '../utils/validation';
-import { AppErrorHandler } from '../types/errors';
+import { AdventurerFormComponent } from './adventurer/AdventurerFormComponent';
 
 const AdventurerGeneratorPanel: React.FC = () => {
-  const [race, setRace] = useState<string>('random');
   const [promptCount, setPromptCount] = useState<number>(APP_CONSTANTS.PROMPT_COUNT.DEFAULT);
-  const [availableRaces, setAvailableRaces] = useState<string[]>([]);
   
-  const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
+  const addGeneratedPrompts = usePromptStore(state => state.addGeneratedPrompts);
   const { generateAdventurerPrompts, loading, error, clearError } = usePromptGeneration();
   const { addToHistory } = useSession();
+  const { options, loading: optionsLoading, error: optionsError } = useAdventurerOptions();
+  const { formData, updateField, resetForm, buildGenerationParams } = useAdventurerForm();
 
-  // Load available races from backend
-  useEffect(() => {
-    const loadRaces = async () => {
-      try {
-        const response = await PromptApi.getAdventurerRaces();
-        setAvailableRaces(response.races || []);
-      } catch (error) {
-        console.error('Failed to load adventurer races:', error);
-        // Fallback to empty array - user can still generate with random
-        setAvailableRaces([]);
-      }
-    };
-
-    loadRaces();
-  }, []);
-
-  const handleGenerate = async () => {
+  const handleGenerate = async (): Promise<void> => {
     clearError();
     
     const validation = ValidationUtils.validatePromptCount(promptCount);
@@ -41,13 +26,9 @@ const AdventurerGeneratorPanel: React.FC = () => {
     }
     
     const safeCount = ValidationUtils.sanitizePromptCount(promptCount);
-    
-    try {
-      const generationParams = {
-        count: safeCount,
-        race: race === 'random' ? undefined : race,
-      };
+    const generationParams = buildGenerationParams(safeCount);
 
+    try {
       const apiPrompts = await generateAdventurerPrompts(generationParams);
       
       if (apiPrompts.length > 0) {
@@ -60,70 +41,75 @@ const AdventurerGeneratorPanel: React.FC = () => {
               id: prompt.id,
               title: prompt.title,
               description: prompt.description,
+              tags: prompt.tags,
               type: 'adventurer',
-              timestamp: new Date().toISOString(),
+              timestamp: Date.now(),
             });
           } catch (historyError) {
-            console.warn('Failed to add to history:', historyError);
-            // Continue - don't block UI for history failures
+            console.error('Failed to add to history:', historyError);
           }
         }
       }
-    } catch (error) {
-      console.error('Generation failed:', error);
-      // Error is already set by the hook
+    } catch (generationError) {
+      console.error('Generation failed:', generationError);
     }
   };
 
+  const isLoading = loading || optionsLoading;
+  const displayError = error || optionsError;
+
   return (
-    <div className="p-4 bg-gray-100 rounded-md shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Adventurer Generator Panel</h2>
-      {error && (
-        <div className="mb-4 text-red-600">
-          {AppErrorHandler.getDisplayMessage(error)}
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-bold mb-6 text-center">Adventurer Prompt Generator</h2>
+        
+        {displayError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {typeof displayError === 'string' ? displayError : 'An error occurred'}
+          </div>
+        )}
+
+        <div className="space-y-6">
+          <AdventurerFormComponent
+            formData={formData}
+            onUpdateField={updateField}
+            options={options}
+          />
+
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium">Number of prompts:</label>
+            <input
+              className="w-20 p-2 border border-gray-300 rounded-md"
+              max={APP_CONSTANTS.PROMPT_COUNT.MAX}
+              min={APP_CONSTANTS.PROMPT_COUNT.MIN}
+              onChange={(event) => setPromptCount(Number.parseInt(event.target.value, 10))}
+              type="number"
+              value={promptCount}
+            />
+            <span className="text-xs text-gray-500">
+              (Min: {APP_CONSTANTS.PROMPT_COUNT.MIN}, Max: {APP_CONSTANTS.PROMPT_COUNT.MAX})
+            </span>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={isLoading}
+              onClick={handleGenerate}
+            >
+              {isLoading ? 'Generating...' : 'Generate Adventurer Prompts'}
+            </button>
+            
+            <button
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              disabled={isLoading}
+              onClick={resetForm}
+            >
+              Reset Form
+            </button>
+          </div>
         </div>
-      )}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="race">
-          Race
-        </label>
-        <select
-          id="race"
-          value={race}
-          onChange={(e) => setRace(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        >
-          <option value="random">Random</option>
-          {availableRaces.map((raceOption) => (
-            <option key={raceOption} value={raceOption}>
-              {raceOption.charAt(0).toUpperCase() + raceOption.slice(1)}
-            </option>
-          ))}
-        </select>
       </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="promptCount">
-          Prompt Count
-        </label>
-        <input
-          id="promptCount"
-          type="number"
-          min={APP_CONSTANTS.PROMPT_COUNT.MIN}
-          max={APP_CONSTANTS.PROMPT_COUNT.MAX}
-          value={promptCount}
-          onChange={(e) => setPromptCount(ValidationUtils.sanitizePromptCount(e.target.value))}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        />
-      </div>
-      <button
-        onClick={handleGenerate}
-        disabled={loading}
-        className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Generating...' : 'Generate'}
-      </button>
     </div>
   );
 };

@@ -63,14 +63,20 @@ export class PromptApi {
     );
   }
 
-  // Get available adventurer races
-  static async getAdventurerRaces(): Promise<{ races: string[] }> {
-    return apiClient.get<{ races: string[] }>('/adventurers/races');
-  }
-
-  // Get available adventurer classes
-  static async getAdventurerClasses(): Promise<{ classes: string[] }> {
-    return apiClient.get<{ classes: string[] }>('/adventurers/classes');
+  // Get all available adventurer options
+  static async getAdventurerOptions(): Promise<{
+    races: string[];
+    classes: string[];
+    experienceLevels: string[];
+    genders: string[];
+    artisticStyles: string[];
+    environments: string[];
+    hairColors: string[];
+    skinColors: string[];
+    eyeColors: string[];
+    eyeStyles: string[];
+  }> {
+    return apiClient.get('/adventurers/options');
   }
 
   // Get available species

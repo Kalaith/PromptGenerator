@@ -137,6 +137,24 @@ final class AlienGenerationService extends BaseGenerationService
         return array_map(fn($climate) => $climate->name, $climates);
     }
 
+    public function getAvailableGenders(): array
+    {
+        $genders = $this->gameAssetRepository->getByType('gender');
+        return array_map(fn($gender) => $gender->name, $genders);
+    }
+
+    public function getAvailableArtisticStyles(): array
+    {
+        $styles = $this->gameAssetRepository->getByType('artistic_style');
+        return array_map(fn($style) => $style->name, $styles);
+    }
+
+    public function getAvailableEnvironments(): array
+    {
+        $environments = $this->gameAssetRepository->getByType('environment');
+        return array_map(fn($environment) => $environment->name, $environments);
+    }
+
     private function adaptAttributesToSpecies(array $attributes, string $speciesClass): array
     {
         // Adapt hair attributes based on species type

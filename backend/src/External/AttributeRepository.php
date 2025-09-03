@@ -57,4 +57,13 @@ final class AttributeRepository
             ->pluck('category')
             ->toArray();
     }
+
+    public function getAttributeValues(string $category): array
+    {
+        return Attribute::active()
+            ->byCategory($category)
+            ->ordered()
+            ->pluck('value')
+            ->toArray();
+    }
 }

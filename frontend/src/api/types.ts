@@ -29,10 +29,17 @@ export interface GenerateAlienRequest {
 
 export interface GenerateAdventurerRequest {
   count: number;
+  race?: string;
   class?: string;
-  level?: number;
-  equipment_tier?: string;
-  background?: string;
+  experience?: string;
+  gender?: string;
+  style?: string;
+  environment?: string;
+  hairColor?: string;
+  skinColor?: string;
+  eyeColor?: string;
+  eyeStyle?: string;
+  templateId?: string;
 }
 
 export interface UserSession {

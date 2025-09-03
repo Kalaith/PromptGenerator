@@ -49,20 +49,21 @@ final class AdventurerGenerationService extends BaseGenerationService
         parent::__construct($attributeRepository, $gameAssetRepository, $randomGenerator, $templateRepository);
     }
 
-    public function generatePromptData(
-        ?string $race = null, 
-        ?string $className = null, 
-        ?string $experience = null, 
-        ?string $gender = null, 
-        ?string $style = null, 
-        ?string $environment = null,
-        ?string $hairColor = null,
-        ?string $skinColor = null, 
-        ?string $eyeColor = null,
-        ?string $eyeStyle = null,
-        ?string $templateId = null
-    ): array
+    public function generatePromptData(...$args): array
     {
+        // Extract parameters with defaults
+        $race = $args[0] ?? null;
+        $className = $args[1] ?? null;
+        $experience = $args[2] ?? null;
+        $gender = $args[3] ?? null;
+        $style = $args[4] ?? null;
+        $environment = $args[5] ?? null;
+        $hairColor = $args[6] ?? null;
+        $skinColor = $args[7] ?? null;
+        $eyeColor = $args[8] ?? null;
+        $eyeStyle = $args[9] ?? null;
+        $templateId = $args[10] ?? null;
+
         // Select random values if not provided
         $selectedRace = $race === 'random' || $race === null ? 
             $this->getRandomRace() : $race;
@@ -143,6 +144,44 @@ final class AdventurerGenerationService extends BaseGenerationService
     {
         $classes = $this->classRepository->getAllActive();
         return $classes->pluck('name')->toArray();
+    }
+
+    public function getAvailableGenders(): array
+    {
+        $genders = $this->gameAssetRepository->getByType('gender');
+        return array_map(fn($gender) => $gender->name, $genders);
+    }
+
+    public function getAvailableArtisticStyles(): array
+    {
+        $styles = $this->gameAssetRepository->getByType('artistic_style');
+        return array_map(fn($style) => $style->name, $styles);
+    }
+
+    public function getAvailableEnvironments(): array
+    {
+        $environments = $this->gameAssetRepository->getByType('environment');
+        return array_map(fn($environment) => $environment->name, $environments);
+    }
+
+    public function getAvailableHairColors(): array
+    {
+        return $this->attributeRepository->getAttributeValues('hair_colors') ?? [];
+    }
+
+    public function getAvailableSkinColors(): array
+    {
+        return $this->attributeRepository->getAttributeValues('skin_colors') ?? [];
+    }
+
+    public function getAvailableEyeColors(): array
+    {
+        return $this->attributeRepository->getAttributeValues('eye_colors') ?? [];
+    }
+
+    public function getAvailableEyeStyles(): array
+    {
+        return $this->attributeRepository->getAttributeValues('eye_expressions') ?? [];
     }
 
     private function getRandomRace(): string

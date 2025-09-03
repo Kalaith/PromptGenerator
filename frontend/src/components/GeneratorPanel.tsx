@@ -2,11 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi, TemplateApi, Template, SpeciesData, GeneratePromptsRequest } from '../api';
-import { APP_CONSTANTS, GENERATOR_OPTIONS } from '../constants/app';
-import { ValidationUtils } from '../utils/validation';
-import { GeneratorForm, SelectField, NumberField, FormField } from './shared/GeneratorForm';
-import { AppErrorHandler } from '../types/errors';
+import { PromptApi, TemplateApi, type Template, type GeneratePromptsRequest } from '../api';
+import { APP_CONSTANTS } from '../constants/app';
 
 const GeneratorPanel: React.FC = () => {
   const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');
@@ -16,197 +13,147 @@ const GeneratorPanel: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   
-  const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
+  const addGeneratedPrompts = usePromptStore(state => state.addGeneratedPrompts);
   const { generateAnimePrompts, loading, error, clearError } = usePromptGeneration();
   const { addToHistory } = useSession();
 
-  // Load available species and templates from backend
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = async (): Promise<void> => {
       try {
-        // Load species
-        const speciesResponse = await PromptApi.getSpecies();
-        const species = speciesResponse.data.species;
-        const speciesNames = species
-          .filter((s: SpeciesData) => s.is_active !== false) // Handle missing is_active field
-          .map((s: SpeciesData) => s.name);
-        setAvailableSpecies(speciesNames);
-
-        // Load anime templates
-        const templates = await TemplateApi.getPublicTemplates('anime');
-        setAvailableTemplates(templates);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-        // Fallback to empty arrays - user can still generate
-        setAvailableSpecies([]);
-        setAvailableTemplates([]);
+        const [speciesResponse, templatesResponse] = await Promise.all([
+          PromptApi.getSpeciesData(),
+          TemplateApi.getPublicTemplates('base'),
+        ]);
+        
+        setAvailableSpecies(speciesResponse.species || []);
+        setAvailableTemplates(templatesResponse);
+      } catch (loadError) {
+        console.error('Failed to load data:', loadError);
       }
     };
 
-    loadData();
+    void loadData();
   }, []);
 
-  useEffect(() => {
-    // When the type changes, reset species to random
-    setSpecies('random');
-  }, [type]);
-
-  const handleGenerate = async () => {
+  const handleGenerate = async (): Promise<void> => {
     clearError();
     
-    const validation = ValidationUtils.validatePromptCount(promptCount);
-    if (!validation.isValid) {
-      return;
-    }
-    
-    const safeCount = ValidationUtils.sanitizePromptCount(promptCount);
-    
+    const safeCount = Math.max(1, Math.min(promptCount, 50));
+    const request: GeneratePromptsRequest = {
+      count: safeCount,
+      type: type === 'random' ? undefined : type,
+      species: species === 'random' ? undefined : species,
+      templateId: selectedTemplate?.id,
+    };
+
     try {
-        let generationParams: GeneratePromptsRequest = {
-          count: safeCount,
-          type: type === 'random' ? 'animalGirl' : type, // Default to animalGirl for random
-        };
-        
-        // Only add species if it's not random
-        if (species !== 'random') {
-          generationParams.species = species;
-        }
-
-        // Apply template if selected
-        if (selectedTemplate) {
-          const templateAppliedParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
-          generationParams = { ...generationParams, ...templateAppliedParams };
-          // Increment template usage count
-          try {
-            await TemplateApi.useTemplate(selectedTemplate.id);
-          } catch (err) {
-            console.warn('Failed to update template usage:', err);
-          }
-        }
-
-        const apiPrompts = await generateAnimePrompts(generationParams);
-        
-        if (apiPrompts.length > 0) {
+      const apiPrompts = await generateAnimePrompts(request);
+      
+      if (apiPrompts.length > 0) {
         addGeneratedPrompts(apiPrompts);
         
-        // Add to history
         for (const prompt of apiPrompts) {
           try {
             await addToHistory({
               id: prompt.id,
               title: prompt.title,
               description: prompt.description,
-              type: prompt.prompt_type,
-              timestamp: new Date().toISOString(),
+              tags: prompt.tags,
+              type: 'anime',
+              timestamp: Date.now(),
             });
           } catch (historyError) {
-            console.warn('Failed to add to history:', historyError);
-            // Continue - don't block UI for history failures
+            console.error('Failed to add to history:', historyError);
           }
         }
       }
-    } catch (error) {
-      console.error('Generation failed:', error);
-      // Error is already set by the hook
+    } catch (generationError) {
+      console.error('Generation failed:', generationError);
     }
   };
 
   return (
-    <div className="p-4 bg-gray-100 rounded-md shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Generator Panel</h2>
-      {error && (
-        <div className="mb-4 text-red-600">
-          {AppErrorHandler.getDisplayMessage(error)}
-        </div>
-      )}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="type">
-          Type
-        </label>
-        <select
-          id="type"
-          value={type}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value as 'animalGirl' | 'monster' | 'monsterGirl' | 'random')}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        >
-          <option value="random">Random</option>
-          <option value="animalGirl">Animal Girl</option>
-          <option value="monster">Monster</option>
-          <option value="monsterGirl">Monster Girl</option>
-        </select>
-      </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="species">
-          Species
-        </label>
-        <select
-          id="species"
-          value={species}
-          onChange={(e) => setSpecies(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        >
-          <option value="random">Random</option>
-          {availableSpecies.map((speciesName) => (
-            <option key={speciesName} value={speciesName}>
-              {speciesName.charAt(0).toUpperCase() + speciesName.slice(1)}
-            </option>
-          ))}
-        </select>
-      </div>
-      
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="template">
-          Template (Optional)
-        </label>
-        <select
-          id="template"
-          value={selectedTemplate?.id || ''}
-          onChange={(e) => {
-            const templateId = e.target.value;
-            const template = templateId ? availableTemplates.find(t => t.id === Number(templateId)) : null;
-            setSelectedTemplate(template || null);
-          }}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        >
-          <option value="">No Template</option>
-          {availableTemplates.map((template) => (
-            <option key={template.id} value={template.id}>
-              {template.name} ({template.usage_count} uses)
-            </option>
-          ))}
-        </select>
-        {selectedTemplate && (
-          <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
-            <div className="font-medium">{selectedTemplate.name}</div>
-            <div className="text-gray-600">{selectedTemplate.description}</div>
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-bold mb-6 text-center">Anime Prompt Generator</h2>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
           </div>
         )}
+
+        <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void handleGenerate(); }}>
+          <div>
+            <label className="block text-sm font-medium mb-1">Type</label>
+            <select
+              className="w-full p-2 border border-gray-300 rounded-md"
+              onChange={(event) => setType(event.target.value as typeof type)}
+              value={type}
+            >
+              <option value="random">Random</option>
+              <option value="animalGirl">Animal Girl</option>
+              <option value="monster">Monster</option>
+              <option value="monsterGirl">Monster Girl</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Species</label>
+            <select
+              className="w-full p-2 border border-gray-300 rounded-md"
+              onChange={(event) => setSpecies(event.target.value)}
+              value={species}
+            >
+              <option value="random">Random</option>
+              {availableSpecies.map(speciesOption => (
+                <option key={speciesOption} value={speciesOption}>{speciesOption}</option>
+              ))}
+            </select>
+          </div>
+
+          {availableTemplates.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Template (Optional)</label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-md"
+                onChange={(event) => {
+                  const template = availableTemplates.find(t => t.id === event.target.value);
+                  setSelectedTemplate(template ?? null);
+                }}
+                value={selectedTemplate?.id ?? ''}
+              >
+                <option value="">No template</option>
+                {availableTemplates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Number of prompts</label>
+            <input
+              className="w-full p-2 border border-gray-300 rounded-md"
+              max={APP_CONSTANTS.PROMPT_COUNT.MAX}
+              min={APP_CONSTANTS.PROMPT_COUNT.MIN}
+              onChange={(event) => setPromptCount(Number.parseInt(event.target.value, 10))}
+              type="number"
+              value={promptCount}
+            />
+          </div>
+
+          <button
+            className="w-full bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400"
+            disabled={loading}
+            type="submit"
+          >
+            {loading ? 'Generating...' : 'Generate Anime Prompts'}
+          </button>
+        </form>
       </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="promptCount">
-          Prompt Count
-        </label>
-        <input
-          id="promptCount"
-          type="number"
-          min={1}
-          max={100}
-          value={promptCount}
-          onChange={(e) => setPromptCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        />
-      </div>
-      <button
-        onClick={handleGenerate}
-        disabled={loading}
-        className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Generating...' : 'Generate'}
-      </button>
     </div>
   );
 };

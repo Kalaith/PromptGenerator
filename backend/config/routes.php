@@ -10,6 +10,7 @@ use AnimePromptGen\Controllers\UserSessionController;
 use AnimePromptGen\Controllers\SpeciesController;
 use AnimePromptGen\Controllers\TemplateController;
 use AnimePromptGen\Controllers\DescriptionTemplateController;
+use AnimePromptGen\Controllers\GameAssetsController;
 
 return function (App $app) {
     // API base path
@@ -21,10 +22,15 @@ return function (App $app) {
         // Adventurer generation routes
         $group->post('/adventurers/generate', [AdventurerController::class, 'generate']);
         $group->post('/adventurers/generate-multiple', [AdventurerController::class, 'generateMultiple']);
+        $group->get('/adventurers/options', [AdventurerController::class, 'getAvailableOptions']);
         
         // Alien generation routes
         $group->post('/aliens/generate', [AlienController::class, 'generate']);
         $group->get('/aliens/species-classes', [AlienController::class, 'getSpeciesClasses']);
+        $group->get('/aliens/genders', [AlienController::class, 'getGenders']);
+        $group->get('/aliens/artistic-styles', [AlienController::class, 'getArtisticStyles']);
+        $group->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
+        $group->get('/aliens/climates', [AlienController::class, 'getClimates']);
         
         // User session routes (for favorites, history, preferences)
         $group->get('/session', [UserSessionController::class, 'getSession']);
@@ -59,6 +65,12 @@ return function (App $app) {
         $group->put('/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
         $group->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
         
+        // Game assets routes (specific routes must come before parameterized routes)
+        $group->get('/game-assets/types', [GameAssetsController::class, 'getAssetTypes']);
+        $group->post('/game-assets/initialize', [GameAssetsController::class, 'initializeAssets']);
+        $group->get('/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
+        $group->get('/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
+        
         // Health check
         $group->get('/health', function ($request, $response) {
             $response->getBody()->write(json_encode([
@@ -91,14 +103,25 @@ return function (App $app) {
     $app->put('/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
     $app->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
     
+    // Game assets routes (direct access - specific routes must come before parameterized routes)
+    $app->get('/game-assets/types', [GameAssetsController::class, 'getAssetTypes']);
+    $app->post('/game-assets/initialize', [GameAssetsController::class, 'initializeAssets']);
+    $app->get('/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
+    $app->get('/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
+    
     $app->get('/species', [SpeciesController::class, 'getAll']);
     $app->get('/species/types', [SpeciesController::class, 'getTypes']);
     
     $app->post('/prompts/generate', [PromptController::class, 'generate']);
     $app->post('/adventurers/generate', [AdventurerController::class, 'generate']);
     $app->post('/adventurers/generate-multiple', [AdventurerController::class, 'generateMultiple']);
+    $app->get('/adventurers/options', [AdventurerController::class, 'getAvailableOptions']);
     $app->post('/aliens/generate', [AlienController::class, 'generate']);
     $app->get('/aliens/species-classes', [AlienController::class, 'getSpeciesClasses']);
+    $app->get('/aliens/genders', [AlienController::class, 'getGenders']);
+    $app->get('/aliens/artistic-styles', [AlienController::class, 'getArtisticStyles']);
+    $app->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
+    $app->get('/aliens/climates', [AlienController::class, 'getClimates']);
     
     // Health check (direct access)
     $app->get('/health', function ($request, $response) {

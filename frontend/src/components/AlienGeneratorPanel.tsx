@@ -1,95 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi, TemplateApi, Template, GenerateAlienRequest } from '../api';
-import { AppErrorHandler } from '../types/errors';
+import { useAlienData } from '../hooks/useAlienData';
+import { useAlienForm } from '../hooks/useAlienForm';
+import type { Template } from '../api';
 
 const AlienGeneratorPanel: React.FC = () => {
-  const [speciesClass, setSpeciesClass] = useState<string>('random');
   const [promptCount, setPromptCount] = useState<number>(10);
-  const [style, setStyle] = useState<string>('random');
-  const [environment, setEnvironment] = useState<string>('random');
-  const [climate, setClimate] = useState<string>('random');
-  const [positiveTrait, setPositiveTrait] = useState<string>('random');
-  const [negativeTrait, setNegativeTrait] = useState<string>('random');
-  const [gender, setGender] = useState<string>('random');
-  const [availableSpeciesClasses, setAvailableSpeciesClasses] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   
-  const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
+  const addGeneratedPrompts = usePromptStore(state => state.addGeneratedPrompts);
   const { generateAlienPrompts, loading, error, clearError } = usePromptGeneration();
   const { addToHistory } = useSession();
+  const { availableSpeciesClasses, availableTemplates, loading: dataLoading, error: dataError } = useAlienData();
+  const { formData, updateField, resetForm, buildGenerationRequest } = useAlienForm();
 
-  // Load available species classes and templates from backend
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load species classes
-        const response = await PromptApi.getAlienSpeciesClasses();
-        setAvailableSpeciesClasses(response.species_classes);
-
-        // Load alien templates
-        const templates = await TemplateApi.getPublicTemplates('alien');
-        setAvailableTemplates(templates);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-        // Fallback to empty arrays - user can still generate
-        setAvailableSpeciesClasses([]);
-        setAvailableTemplates([]);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  const handleGenerate = async () => {
+  const handleGenerate = async (): Promise<void> => {
     clearError();
     
     const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
-    
+    const generationRequest = buildGenerationRequest(safeCount, selectedTemplate?.id?.toString());
+
     try {
-      let generationParams: GenerateAlienRequest = {
-        count: safeCount,
-      };
-
-      // Only add parameters if they're not random
-      if (speciesClass !== 'random') {
-        generationParams.species_class = speciesClass;
-      }
-      if (climate !== 'random') {
-        generationParams.climate = climate;
-      }
-      if (positiveTrait !== 'random') {
-        generationParams.positive_trait = positiveTrait;
-      }
-      if (negativeTrait !== 'random') {
-        generationParams.negative_trait = negativeTrait;
-      }
-      if (style !== 'random') {
-        generationParams.style = style;
-      }
-      if (environment !== 'random') {
-        generationParams.environment = environment;
-      }
-      if (gender !== 'random') {
-        generationParams.gender = gender;
-      }
-
-      // Apply template if selected
-      if (selectedTemplate) {
-        const templateAppliedParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
-        generationParams = { ...generationParams, ...templateAppliedParams };
-        // Increment template usage count
-        try {
-          await TemplateApi.useTemplate(selectedTemplate.id);
-        } catch (err) {
-          console.warn('Failed to update template usage:', err);
-        }
-      }
-
-      const apiPrompts = await generateAlienPrompts(generationParams);
+      const apiPrompts = await generateAlienPrompts(generationRequest);
       
       if (apiPrompts.length > 0) {
         addGeneratedPrompts(apiPrompts);
@@ -101,142 +35,121 @@ const AlienGeneratorPanel: React.FC = () => {
               id: prompt.id,
               title: prompt.title,
               description: prompt.description,
-              type: prompt.prompt_type,
-              timestamp: new Date().toISOString(),
+              tags: prompt.tags,
+              type: 'alien',
+              timestamp: Date.now(),
             });
           } catch (historyError) {
-            console.warn('Failed to add to history:', historyError);
-            // Continue - don't block UI for history failures
+            console.error('Failed to add to history:', historyError);
           }
         }
       }
-    } catch (error) {
-      console.error('Alien generation failed:', error);
-      // Error is already set by the hook
+    } catch (generationError) {
+      console.error('Generation failed:', generationError);
     }
   };
 
+  const isLoading = loading || dataLoading;
+  const displayError = error ?? dataError;
+
   return (
-    <div className="p-4 bg-gray-100 rounded-md shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Alien Generator Panel</h2>
-      {error && (
-        <div className="mb-4 text-red-600">
-          {AppErrorHandler.getDisplayMessage(error)}
-        </div>
-      )}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="speciesClass">
-          Species Class
-        </label>
-        <select
-          id="speciesClass"
-          value={speciesClass}
-          onChange={(e) => setSpeciesClass(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        >
-          <option value="random">Random</option>
-          {availableSpeciesClasses.map((cls) => (
-            <option key={cls} value={cls}>{cls}</option>
-          ))}
-        </select>
-      </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="gender">
-          Gender (Optional)
-        </label>
-        <select
-          id="gender"
-          value={gender}
-          onChange={(e) => setGender(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        >
-          <option value="random">Random</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
-      </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="climate">
-          Climate (Optional)
-        </label>
-        <input
-          id="climate"
-          type="text"
-          value={climate === 'random' ? '' : climate}
-          onChange={(e) => setClimate(e.target.value || 'random')}
-          placeholder="e.g., Desert, Ocean, Tropical (leave blank for random)"
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="style">
-          Artistic Style (Optional)
-        </label>
-        <input
-          id="style"
-          type="text"
-          value={style === 'random' ? '' : style}
-          onChange={(e) => setStyle(e.target.value || 'random')}
-          placeholder="e.g., cyberpunk, fantasy, realistic (leave blank for random)"
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        />
-      </div>
-      
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="template">
-          Template (Optional)
-        </label>
-        <select
-          id="template"
-          value={selectedTemplate?.id || ''}
-          onChange={(e) => {
-            const templateId = e.target.value;
-            const template = templateId ? availableTemplates.find(t => t.id === Number(templateId)) : null;
-            setSelectedTemplate(template || null);
-          }}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        >
-          <option value="">No Template</option>
-          {availableTemplates.map((template) => (
-            <option key={template.id} value={template.id}>
-              {template.name} ({template.usage_count} uses)
-            </option>
-          ))}
-        </select>
-        {selectedTemplate && (
-          <div className="mt-2 p-2 bg-green-50 rounded text-xs">
-            <div className="font-medium">{selectedTemplate.name}</div>
-            <div className="text-gray-600">{selectedTemplate.description}</div>
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-bold mb-6 text-center">Alien Species Generator</h2>
+        
+        {displayError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {typeof displayError === 'string' ? displayError : 'An error occurred'}
           </div>
         )}
+
+        <div className="space-y-4">
+          {/* Species Class Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Species Class</label>
+            <select
+              className="w-full p-2 border border-gray-300 rounded-md"
+              onChange={(event) => updateField('speciesClass', event.target.value)}
+              value={formData.speciesClass}
+            >
+              <option value="random">Random</option>
+              {availableSpeciesClasses.map(species => (
+                <option key={species} value={species}>{species}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Other form fields */}
+          {(['style', 'environment', 'climate', 'positiveTrait', 'negativeTrait', 'gender'] as const).map(field => (
+            <div key={field}>
+              <label className="block text-sm font-medium mb-1">
+                {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
+              </label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-md"
+                onChange={(event) => updateField(field, event.target.value)}
+                value={formData[field]}
+              >
+                <option value="random">Random</option>
+              </select>
+            </div>
+          ))}
+
+          {/* Template Selection */}
+          {availableTemplates.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Template (Optional)</label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-md"
+                onChange={(event) => {
+                  const template = availableTemplates.find(t => t.id.toString() === event.target.value);
+                  setSelectedTemplate(template ?? null);
+                }}
+                value={selectedTemplate?.id?.toString() ?? ''}
+              >
+                <option value="">No template (use default prompt structure)</option>
+                {availableTemplates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Prompt Count */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Number of prompts</label>
+            <input
+              className="w-full p-2 border border-gray-300 rounded-md"
+              max="50"
+              min="1"
+              onChange={(event) => setPromptCount(Number.parseInt(event.target.value, 10))}
+              type="number"
+              value={promptCount}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <button
+              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={isLoading}
+              onClick={handleGenerate}
+            >
+              {isLoading ? 'Generating...' : 'Generate Alien Prompts'}
+            </button>
+            
+            <button
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              disabled={isLoading}
+              onClick={resetForm}
+            >
+              Reset Form
+            </button>
+          </div>
+        </div>
       </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" htmlFor="promptCount">
-          Prompt Count
-        </label>
-        <input
-          id="promptCount"
-          type="number"
-          min={1}
-          max={100}
-          value={promptCount}
-          onChange={(e) => setPromptCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
-          className="w-full p-2 border border-gray-300 rounded-md"
-          disabled={loading}
-        />
-      </div>
-      <button
-        onClick={handleGenerate}
-        disabled={loading}
-        className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Generating...' : 'Generate Aliens'}
-      </button>
     </div>
   );
 };

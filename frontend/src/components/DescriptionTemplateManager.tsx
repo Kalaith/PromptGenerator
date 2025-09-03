@@ -1,170 +1,71 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Trash2, Edit, Plus, Eye, Save, X } from 'lucide-react';
-import { 
-  DescriptionTemplateApi, 
-  DescriptionTemplate, 
-  CreateDescriptionTemplateRequest,
-  UpdateDescriptionTemplateRequest 
-} from '../api';
+import { Plus } from 'lucide-react';
+import { GENERATOR_TYPES } from '../constants/templateConstants';
+import { useTemplateManager } from '../hooks/useTemplateManager';
+import { useTemplateForm } from '../hooks/useTemplateForm';
+import { usePlaceholderInsertion } from '../hooks/usePlaceholderInsertion';
+import { TemplateFormComponent } from './templates/TemplateFormComponent';
+import { TemplateListComponent } from './templates/TemplateListComponent';
+import { TemplatePreview } from './templates/TemplatePreview';
 
-interface TemplateFormData {
-  name: string;
-  generator_type: string;
-  template: string;
-  description: string;
-  is_active: boolean;
-  is_default: boolean;
-}
-
-const GENERATOR_TYPES = [
-  { value: 'adventurer', label: 'Adventurer' },
-  { value: 'alien', label: 'Alien' },
-  { value: 'anime', label: 'Anime' },
-  { value: 'base', label: 'Base' }
-];
-
-export function DescriptionTemplateManager() {
-  const [templates, setTemplates] = useState<DescriptionTemplate[]>([]);
+const DescriptionTemplateManager: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('adventurer');
-  const [editingTemplate, setEditingTemplate] = useState<DescriptionTemplate | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [formData, setFormData] = useState<TemplateFormData>({
-    name: '',
-    generator_type: 'adventurer',
-    template: '',
-    description: '',
-    is_active: true,
-    is_default: false
+  
+  const {
+    templates,
+    loading: templatesLoading,
+    error: templatesError,
+    success: templatesSuccess,
+    fetchTemplates,
+    deleteTemplate,
+    clearMessages: clearTemplateMessages,
+  } = useTemplateManager(selectedType);
+
+  const {
+    formData,
+    editingTemplate,
+    isCreating,
+    loading: formLoading,
+    error: formError,
+    success: formSuccess,
+    startEdit,
+    startCreate,
+    cancel,
+    updateFormData,
+    save,
+    clearMessages: clearFormMessages,
+  } = useTemplateForm();
+
+  const { insertPlaceholder } = usePlaceholderInsertion((value: string) => {
+    updateFormData('template', value);
   });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchTemplates();
-  }, [selectedType]);
-
-  const fetchTemplates = async () => {
-    try {
-      setLoading(true);
-      const templates = await DescriptionTemplateApi.getByGeneratorType(selectedType);
-      setTemplates(templates);
-    } catch (err) {
-      setError('Network error while fetching templates');
-    } finally {
-      setLoading(false);
-    }
+  const handleSave = async (): Promise<void> => {
+    await save(fetchTemplates);
   };
 
-  const handleEdit = (template: DescriptionTemplate) => {
-    setEditingTemplate(template);
-    setFormData({
-      name: template.name,
-      generator_type: template.generator_type,
-      template: template.template,
-      description: template.description || '',
-      is_active: template.is_active,
-      is_default: template.is_default
-    });
-    setIsCreating(false);
+  const handleCreate = (): void => {
+    startCreate(selectedType);
+    clearTemplateMessages();
+    clearFormMessages();
   };
 
-  const handleCreate = () => {
-    setEditingTemplate(null);
-    setFormData({
-      name: '',
-      generator_type: selectedType,
-      template: '',
-      description: '',
-      is_active: true,
-      is_default: false
-    });
-    setIsCreating(true);
+  const handleCancel = (): void => {
+    cancel();
+    clearFormMessages();
   };
 
-  const handleSave = async () => {
-    try {
-      setError(null);
-      setLoading(true);
+  const currentTemplate = templates.find(template => 
+    template.generator_type === selectedType && template.is_default
+  );
 
-      let response;
-      if (editingTemplate) {
-        response = await DescriptionTemplateApi.update(editingTemplate.id, formData);
-      } else {
-        response = await DescriptionTemplateApi.create(formData);
-      }
-      
-      if (response.success) {
-        setSuccess(editingTemplate ? 'Template updated successfully!' : 'Template created successfully!');
-        setEditingTemplate(null);
-        setIsCreating(false);
-        fetchTemplates();
-      } else {
-        setError(response.error || 'Failed to save template');
-        if (response.validation_errors) {
-          setError(`Validation errors: ${response.validation_errors.join(', ')}`);
-        }
-      }
-    } catch (err) {
-      setError('Network error while saving template');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (template: DescriptionTemplate) => {
-    if (!confirm(`Are you sure you want to delete "${template.name}"?`)) return;
-
-    try {
-      setLoading(true);
-      const response = await DescriptionTemplateApi.delete(template.id);
-      
-      if (response.success) {
-        setSuccess('Template deleted successfully!');
-        fetchTemplates();
-      } else {
-        setError(response.error || 'Failed to delete template');
-      }
-    } catch (err) {
-      setError('Network error while deleting template');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingTemplate(null);
-    setIsCreating(false);
-    setError(null);
-  };
-
-  const insertPlaceholder = (placeholder: string) => {
-    const textarea = document.querySelector('textarea[name="template"]') as HTMLTextAreaElement;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const value = textarea.value;
-      const newValue = value.substring(0, start) + `{${placeholder}}` + value.substring(end);
-      
-      setFormData(prev => ({ ...prev, template: newValue }));
-      
-      // Set cursor position after inserted placeholder
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + placeholder.length + 2;
-        textarea.focus();
-      }, 0);
-    }
-  };
-
-  const currentTemplate = templates.find(t => t.generator_type === selectedType && t.is_default);
+  const error = templatesError ?? formError;
+  const success = templatesSuccess ?? formSuccess;
+  const loading = templatesLoading || formLoading;
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -172,7 +73,7 @@ export function DescriptionTemplateManager() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Description Template Manager</span>
-            <Button onClick={handleCreate} className="flex items-center gap-2">
+            <Button className="flex items-center gap-2" onClick={handleCreate}>
               <Plus className="w-4 h-4" />
               Create Template
             </Button>
@@ -194,7 +95,7 @@ export function DescriptionTemplateManager() {
             </Alert>
           )}
 
-          <Tabs value={selectedType} onValueChange={setSelectedType}>
+          <Tabs onValueChange={setSelectedType} value={selectedType}>
             <TabsList className="grid w-full grid-cols-4">
               {GENERATOR_TYPES.map(type => (
                 <TabsTrigger key={type.value} value={type.value}>
@@ -208,215 +109,32 @@ export function DescriptionTemplateManager() {
                 <div className="space-y-4">
                   {/* Current Default Template Preview */}
                   {currentTemplate && !editingTemplate && !isCreating && (
-                    <Card className="border-blue-200 bg-blue-50">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <span>Current Default Template</span>
-                          <Badge variant="secondary">Default</Badge>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div>
-                            <strong className="text-sm">Name:</strong> {currentTemplate.name}
-                          </div>
-                          <div>
-                            <strong className="text-sm">Template:</strong>
-                            <pre className="bg-white p-3 rounded mt-1 text-sm overflow-x-auto border">
-                              {currentTemplate.template}
-                            </pre>
-                          </div>
-                          <div>
-                            <strong className="text-sm">Sample Output:</strong>
-                            <div className="bg-white border p-3 rounded mt-1 text-sm italic">
-                              {currentTemplate.preview}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <TemplatePreview template={currentTemplate} />
                   )}
 
                   {/* Template Form */}
                   {(editingTemplate || isCreating) && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <span>{editingTemplate ? 'Edit Template' : 'Create Template'}</span>
-                          <div className="flex gap-2">
-                            <Button onClick={handleSave} disabled={loading}>
-                              <Save className="w-4 h-4 mr-2" />
-                              Save
-                            </Button>
-                            <Button onClick={handleCancel} variant="outline">
-                              <X className="w-4 h-4 mr-2" />
-                              Cancel
-                            </Button>
-                          </div>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Name</label>
-                            <Input
-                              value={formData.name}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                              placeholder="Template name"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Generator Type</label>
-                            <Select 
-                              value={formData.generator_type} 
-                              onValueChange={(value: string) => setFormData(prev => ({ ...prev, generator_type: value }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {GENERATOR_TYPES.map(type => (
-                                  <SelectItem key={type.value} value={type.value}>
-                                    {type.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Description</label>
-                          <Input
-                            value={formData.description}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                            placeholder="Template description (optional)"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="is_active"
-                              checked={formData.is_active}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                            />
-                            <label htmlFor="is_active" className="text-sm font-medium">Active</label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="is_default"
-                              checked={formData.is_default}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, is_default: e.target.checked }))}
-                            />
-                            <label htmlFor="is_default" className="text-sm font-medium">Set as Default</label>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Template</label>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="col-span-2">
-                              <Textarea
-                                name="template"
-                                value={formData.template}
-                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, template: e.target.value }))}
-                                placeholder="Enter your template with {placeholder} variables"
-                                rows={8}
-                              />
-                              <p className="text-xs text-gray-500 mt-1">
-                                Use placeholders like {'{hairColor}'}, {'{race}'}, {'{pronoun_subject}'} to create dynamic descriptions.
-                              </p>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium mb-2">Available Placeholders</div>
-                              <div className="space-y-1 max-h-48 overflow-y-auto">
-                                {(editingTemplate?.available_placeholders || 
-                                  templates.find(t => t.generator_type === formData.generator_type)?.available_placeholders || 
-                                  []).map((placeholder: string) => (
-                                  <Button
-                                    key={placeholder}
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full justify-start text-xs"
-                                    onClick={() => insertPlaceholder(placeholder)}
-                                  >
-                                    {`{${placeholder}}`}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <TemplateFormComponent
+                      editingTemplate={editingTemplate}
+                      formData={formData}
+                      loading={loading}
+                      onCancel={handleCancel}
+                      onInsertPlaceholder={insertPlaceholder}
+                      onSave={handleSave}
+                      onUpdateFormData={updateFormData}
+                      templates={templates}
+                    />
                   )}
 
                   {/* Templates List */}
                   {!editingTemplate && !isCreating && (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium">All {type.label} Templates</h3>
-                      {loading ? (
-                        <div className="text-center py-8">Loading templates...</div>
-                      ) : templates.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          No templates found for {type.label} generator
-                        </div>
-                      ) : (
-                        <div className="grid gap-4">
-                          {templates.map(template => (
-                            <Card key={template.id}>
-                              <CardHeader>
-                                <CardTitle className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span>{template.name}</span>
-                                    {template.is_default && <Badge variant="secondary">Default</Badge>}
-                                    {!template.is_active && <Badge variant="destructive">Inactive</Badge>}
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleEdit(template)}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </Button>
-                                    {!template.is_default && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleDelete(template)}
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                {template.description && (
-                                  <p className="text-sm text-gray-600 mb-3">{template.description}</p>
-                                )}
-                                <div className="text-sm">
-                                  <strong>Template:</strong>
-                                  <pre className="bg-gray-100 p-2 rounded mt-1 text-xs overflow-x-auto">
-                                    {template.template}
-                                  </pre>
-                                </div>
-                                <div className="text-sm mt-3">
-                                  <strong>Sample Output:</strong>
-                                  <div className="bg-blue-50 p-2 rounded mt-1 text-xs italic">
-                                    {template.preview}
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <TemplateListComponent
+                      generatorTypeLabel={type.label}
+                      loading={loading}
+                      onDelete={deleteTemplate}
+                      onEdit={startEdit}
+                      templates={templates}
+                    />
                   )}
                 </div>
               </TabsContent>
@@ -426,4 +144,6 @@ export function DescriptionTemplateManager() {
       </Card>
     </div>
   );
-}
+};
+
+export default DescriptionTemplateManager;
