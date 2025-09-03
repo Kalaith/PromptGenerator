@@ -59,4 +59,35 @@ return function (App $app) {
             return $response->withHeader('Content-Type', 'application/json');
         });
     });
+    
+    // Direct routes (without API prefix) for backward compatibility and direct browser access
+    $app->get('/templates', [TemplateController::class, 'getAll']);
+    $app->get('/templates/popular', [TemplateController::class, 'getPopular']);
+    $app->get('/templates/recent', [TemplateController::class, 'getRecent']);
+    $app->get('/templates/search', [TemplateController::class, 'search']);
+    $app->post('/templates', [TemplateController::class, 'create']);
+    $app->get('/templates/{id}', [TemplateController::class, 'getById']);
+    $app->put('/templates/{id}', [TemplateController::class, 'update']);
+    $app->delete('/templates/{id}', [TemplateController::class, 'delete']);
+    $app->post('/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
+    $app->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
+    
+    $app->get('/species', [SpeciesController::class, 'getAll']);
+    $app->get('/species/types', [SpeciesController::class, 'getTypes']);
+    
+    $app->post('/prompts/generate', [PromptController::class, 'generate']);
+    $app->post('/adventurers/generate', [AdventurerController::class, 'generate']);
+    $app->post('/adventurers/generate-multiple', [AdventurerController::class, 'generateMultiple']);
+    $app->post('/aliens/generate', [AlienController::class, 'generate']);
+    $app->get('/aliens/species-classes', [AlienController::class, 'getSpeciesClasses']);
+    
+    // Health check (direct access)
+    $app->get('/health', function ($request, $response) {
+        $response->getBody()->write(json_encode([
+            'status' => 'healthy',
+            'version' => $_ENV['API_VERSION'] ?? 'v1',
+            'timestamp' => date('c')
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
 };

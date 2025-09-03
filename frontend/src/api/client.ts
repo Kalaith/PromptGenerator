@@ -60,14 +60,14 @@ class ApiClient {
   async post<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data ? JSON.stringify(data) : null,
     });
   }
 
   async put<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data ? JSON.stringify(data) : null,
     });
   }
 
@@ -78,7 +78,7 @@ class ApiClient {
 
 // Create and export the API client instance
 export const apiClient = new ApiClient({
-  baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseUrl: (import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
   timeout: 30000, // 30 seconds
 });
 
