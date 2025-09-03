@@ -2,35 +2,43 @@ import React, { useEffect, useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi } from '../api';
+import { PromptApi, TemplateApi, Template } from '../api';
 
 const GeneratorPanel: React.FC = () => {
   const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');
   const [species, setSpecies] = useState<string>('random');
   const [promptCount, setPromptCount] = useState<number>(10);
   const [availableSpecies, setAvailableSpecies] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   
   const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
   const { generateAnimePrompts, loading, error, clearError } = usePromptGeneration();
   const { addToHistory } = useSession();
 
-  // Load available species from backend
+  // Load available species and templates from backend
   useEffect(() => {
-    const loadSpecies = async () => {
+    const loadData = async () => {
       try {
-        const response = await PromptApi.getSpecies();
-        const speciesNames = response.species
+        // Load species
+        const speciesResponse = await PromptApi.getSpecies();
+        const speciesNames = speciesResponse.species
           .filter(s => s.is_active)
           .map(s => s.name);
         setAvailableSpecies(speciesNames);
+
+        // Load anime templates
+        const templates = await TemplateApi.getPublicTemplates('anime');
+        setAvailableTemplates(templates);
       } catch (error) {
-        console.error('Failed to load species:', error);
-        // Fallback to empty array - user can still generate with random
+        console.error('Failed to load data:', error);
+        // Fallback to empty arrays - user can still generate
         setAvailableSpecies([]);
+        setAvailableTemplates([]);
       }
     };
 
-    loadSpecies();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -44,11 +52,24 @@ const GeneratorPanel: React.FC = () => {
     const safeCount = Number.isFinite(Number(promptCount)) ? Math.max(1, Math.floor(Number(promptCount))) : 1;
     
     try {
-      const apiPrompts = await generateAnimePrompts({
+      let generationParams = {
         count: safeCount,
         type: type === 'random' ? 'animalGirl' : type, // Default to animalGirl for random
         species: species === 'random' ? undefined : species,
-      });
+      };
+
+      // Apply template if selected
+      if (selectedTemplate) {
+        generationParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
+        // Increment template usage count
+        try {
+          await TemplateApi.useTemplate(selectedTemplate.id);
+        } catch (err) {
+          console.warn('Failed to update template usage:', err);
+        }
+      }
+
+      const apiPrompts = await generateAnimePrompts(generationParams);
       
       if (apiPrompts.length > 0) {
         addGeneratedPrompts(apiPrompts);
@@ -114,6 +135,36 @@ const GeneratorPanel: React.FC = () => {
             </option>
           ))}
         </select>
+      </div>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2" htmlFor="template">
+          Template (Optional)
+        </label>
+        <select
+          id="template"
+          value={selectedTemplate?.id || ''}
+          onChange={(e) => {
+            const templateId = e.target.value;
+            const template = templateId ? availableTemplates.find(t => t.id === Number(templateId)) : null;
+            setSelectedTemplate(template || null);
+          }}
+          className="w-full p-2 border border-gray-300 rounded-md"
+          disabled={loading}
+        >
+          <option value="">No Template</option>
+          {availableTemplates.map((template) => (
+            <option key={template.id} value={template.id}>
+              {template.name} ({template.usage_count} uses)
+            </option>
+          ))}
+        </select>
+        {selectedTemplate && (
+          <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+            <div className="font-medium">{selectedTemplate.name}</div>
+            <div className="text-gray-600">{selectedTemplate.description}</div>
+          </div>
+        )}
       </div>
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2" htmlFor="promptCount">

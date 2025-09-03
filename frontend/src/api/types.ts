@@ -65,3 +65,41 @@ export interface SpeciesData {
   created_at: string;
   updated_at: string;
 }
+
+export interface Template {
+  id: number;
+  name: string;
+  description?: string;
+  type: 'anime' | 'alien';
+  template_data: Record<string, any>;
+  is_public: boolean;
+  is_active: boolean;
+  created_by?: string;
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTemplateRequest {
+  name: string;
+  description?: string;
+  type: 'anime' | 'alien';
+  template_data: Record<string, any>;
+  is_public?: boolean;
+  created_by?: string;
+}
+
+export interface UpdateTemplateRequest {
+  name?: string;
+  description?: string;
+  template_data?: Record<string, any>;
+  is_public?: boolean;
+}
+
+export interface TemplateFilters {
+  type?: 'anime' | 'alien';
+  public_only?: boolean;
+  created_by?: string;
+  order_by?: string;
+  order_direction?: 'asc' | 'desc';
+}

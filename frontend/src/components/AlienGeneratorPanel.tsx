@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi } from '../api';
+import { PromptApi, TemplateApi, Template } from '../api';
 
 const AlienGeneratorPanel: React.FC = () => {
   const [speciesClass, setSpeciesClass] = useState<string>('random');
@@ -14,25 +14,33 @@ const AlienGeneratorPanel: React.FC = () => {
   const [negativeTrait, setNegativeTrait] = useState<string>('random');
   const [gender, setGender] = useState<string>('random');
   const [availableSpeciesClasses, setAvailableSpeciesClasses] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   
   const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
   const { generateAlienPrompts, loading, error, clearError } = usePromptGeneration();
   const { addToHistory } = useSession();
 
-  // Load available species classes from backend
+  // Load available species classes and templates from backend
   useEffect(() => {
-    const loadSpeciesClasses = async () => {
+    const loadData = async () => {
       try {
+        // Load species classes
         const response = await PromptApi.getAlienSpeciesClasses();
         setAvailableSpeciesClasses(response.species_classes);
+
+        // Load alien templates
+        const templates = await TemplateApi.getPublicTemplates('alien');
+        setAvailableTemplates(templates);
       } catch (error) {
-        console.error('Failed to load alien species classes:', error);
-        // Fallback to empty array - user can still generate with random
+        console.error('Failed to load data:', error);
+        // Fallback to empty arrays - user can still generate
         setAvailableSpeciesClasses([]);
+        setAvailableTemplates([]);
       }
     };
 
-    loadSpeciesClasses();
+    loadData();
   }, []);
 
   const handleGenerate = async () => {
@@ -41,7 +49,7 @@ const AlienGeneratorPanel: React.FC = () => {
     const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
     
     try {
-      const apiPrompts = await generateAlienPrompts({
+      let generationParams = {
         count: safeCount,
         species_class: speciesClass === 'random' ? undefined : speciesClass,
         climate: climate === 'random' ? undefined : climate,
@@ -50,7 +58,20 @@ const AlienGeneratorPanel: React.FC = () => {
         style: style === 'random' ? undefined : style,
         environment: environment === 'random' ? undefined : environment,
         gender: gender === 'random' ? undefined : gender,
-      });
+      };
+
+      // Apply template if selected
+      if (selectedTemplate) {
+        generationParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
+        // Increment template usage count
+        try {
+          await TemplateApi.useTemplate(selectedTemplate.id);
+        } catch (err) {
+          console.warn('Failed to update template usage:', err);
+        }
+      }
+
+      const apiPrompts = await generateAlienPrompts(generationParams);
       
       if (apiPrompts.length > 0) {
         addGeneratedPrompts(apiPrompts);
@@ -141,6 +162,36 @@ const AlienGeneratorPanel: React.FC = () => {
           className="w-full p-2 border border-gray-300 rounded-md"
           disabled={loading}
         />
+      </div>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2" htmlFor="template">
+          Template (Optional)
+        </label>
+        <select
+          id="template"
+          value={selectedTemplate?.id || ''}
+          onChange={(e) => {
+            const templateId = e.target.value;
+            const template = templateId ? availableTemplates.find(t => t.id === Number(templateId)) : null;
+            setSelectedTemplate(template || null);
+          }}
+          className="w-full p-2 border border-gray-300 rounded-md"
+          disabled={loading}
+        >
+          <option value="">No Template</option>
+          {availableTemplates.map((template) => (
+            <option key={template.id} value={template.id}>
+              {template.name} ({template.usage_count} uses)
+            </option>
+          ))}
+        </select>
+        {selectedTemplate && (
+          <div className="mt-2 p-2 bg-green-50 rounded text-xs">
+            <div className="font-medium">{selectedTemplate.name}</div>
+            <div className="text-gray-600">{selectedTemplate.description}</div>
+          </div>
+        )}
       </div>
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2" htmlFor="promptCount">

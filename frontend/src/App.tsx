@@ -5,6 +5,7 @@ import RouterHeader from './components/RouterHeader';
 import AnimeGeneratorPage from './pages/AnimeGeneratorPage';
 import AdventurerGeneratorPage from './pages/AdventurerGeneratorPage';
 import AlienGeneratorPage from './pages/AlienGeneratorPage';
+import TemplatesPage from './pages/TemplatesPage';
 
 const App: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const App: React.FC = () => {
             <Route path="/anime" element={<AnimeGeneratorPage />} />
             <Route path="/adventurer" element={<AdventurerGeneratorPage />} />
             <Route path="/alien" element={<AlienGeneratorPage />} />
+            <Route path="/templates" element={<TemplatesPage />} />
             <Route path="*" element={<Navigate to="/anime" replace />} />
           </Routes>
         </main>

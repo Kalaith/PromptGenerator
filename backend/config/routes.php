@@ -8,6 +8,7 @@ use AnimePromptGen\Controllers\AdventurerController;
 use AnimePromptGen\Controllers\AlienController;
 use AnimePromptGen\Controllers\UserSessionController;
 use AnimePromptGen\Controllers\SpeciesController;
+use AnimePromptGen\Controllers\TemplateController;
 
 return function (App $app) {
     // API base path
@@ -35,6 +36,18 @@ return function (App $app) {
         // Species routes
         $group->get('/species', [SpeciesController::class, 'getAll']);
         $group->get('/species/types', [SpeciesController::class, 'getTypes']);
+        
+        // Template routes (specific routes must come before parameterized routes)
+        $group->get('/templates', [TemplateController::class, 'getAll']);
+        $group->get('/templates/popular', [TemplateController::class, 'getPopular']);
+        $group->get('/templates/recent', [TemplateController::class, 'getRecent']);
+        $group->get('/templates/search', [TemplateController::class, 'search']);
+        $group->post('/templates', [TemplateController::class, 'create']);
+        $group->get('/templates/{id}', [TemplateController::class, 'getById']);
+        $group->put('/templates/{id}', [TemplateController::class, 'update']);
+        $group->delete('/templates/{id}', [TemplateController::class, 'delete']);
+        $group->post('/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
+        $group->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
         
         // Health check
         $group->get('/health', function ($request, $response) {

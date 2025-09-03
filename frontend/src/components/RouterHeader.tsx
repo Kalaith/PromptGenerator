@@ -32,13 +32,23 @@ const RouterHeader: React.FC = () => {
         </Link>
         <Link
           to="/alien"
-          className={`py-1 px-3 rounded-md transition-colors ${
+          className={`py-1 px-3 rounded-md mr-2 transition-colors ${
             isActive('/alien') 
               ? 'bg-blue-700 text-white' 
               : 'bg-white text-blue-500 hover:bg-gray-200'
           }`}
         >
           Alien Generator
+        </Link>
+        <Link
+          to="/templates"
+          className={`py-1 px-3 rounded-md transition-colors ${
+            isActive('/templates') 
+              ? 'bg-blue-700 text-white' 
+              : 'bg-white text-blue-500 hover:bg-gray-200'
+          }`}
+        >
+          Templates
         </Link>
       </div>
     </header>

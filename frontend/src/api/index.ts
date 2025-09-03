@@ -2,6 +2,7 @@
 export { apiClient } from './client';
 export { PromptApi } from './promptApi';
 export { SessionApi } from './sessionApi';
+export { TemplateApi } from './templateApi';
 
 // Export types
 export type { ApiResponse } from './client';
@@ -13,6 +14,10 @@ export type {
   UserSession,
   UpdateSessionRequest,
   SpeciesData,
+  Template,
+  CreateTemplateRequest,
+  UpdateTemplateRequest,
+  TemplateFilters,
 } from './types';
 
 export type {
@@ -26,3 +31,9 @@ export type {
   SessionResponse,
   SessionActionResponse,
 } from './sessionApi';
+
+export type {
+  TemplatesResponse,
+  TemplateResponse,
+  TemplateActionResponse,
+} from './templateApi';
