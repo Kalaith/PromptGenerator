@@ -26,7 +26,10 @@ export interface GenerateAdventurersResponse {
 }
 
 export interface SpeciesResponse {
-  species: SpeciesData[];
+  success: boolean;
+  data: {
+    species: SpeciesData[];
+  };
 }
 
 export class PromptApi {
@@ -35,7 +38,7 @@ export class PromptApi {
     request: GeneratePromptsRequest
   ): Promise<GeneratePromptsResponse> {
     return apiClient.post<GeneratePromptsResponse>(
-      '/api/v1/prompts/generate',
+      '/prompts/generate',
       request
     );
   }
@@ -45,7 +48,7 @@ export class PromptApi {
     request: GenerateAlienRequest
   ): Promise<GenerateAliensResponse> {
     return apiClient.post<GenerateAliensResponse>(
-      '/api/v1/aliens/generate',
+      '/aliens/generate',
       request
     );
   }
@@ -55,25 +58,25 @@ export class PromptApi {
     request: GenerateAdventurerRequest
   ): Promise<GenerateAdventurersResponse> {
     return apiClient.post<GenerateAdventurersResponse>(
-      '/api/v1/adventurers/generate',
+      '/adventurers/generate',
       request
     );
   }
 
   // Get available species
   static async getSpecies(): Promise<SpeciesResponse> {
-    return apiClient.get<SpeciesResponse>('/api/v1/species');
+    return apiClient.get<SpeciesResponse>('/species');
   }
 
   // Get species types
   static async getSpeciesTypes(): Promise<{ types: string[] }> {
-    return apiClient.get<{ types: string[] }>('/api/v1/species/types');
+    return apiClient.get<{ types: string[] }>('/species/types');
   }
 
   // Get alien species classes
   static async getAlienSpeciesClasses(): Promise<{ species_classes: string[] }> {
     return apiClient.get<{ species_classes: string[] }>(
-      '/api/v1/aliens/species-classes'
+      '/aliens/species-classes'
     );
   }
 }

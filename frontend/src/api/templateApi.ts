@@ -37,7 +37,7 @@ export class TemplateApi {
     const query = params.toString();
     const endpoint = `/templates${query ? `?${query}` : ''}`;
     
-    const response = await apiClient.request<TemplatesResponse>(endpoint);
+    const response = await apiClient.get<TemplatesResponse>(endpoint);
     return response.templates;
   }
 
@@ -45,7 +45,7 @@ export class TemplateApi {
    * Get template by ID
    */
   static async getTemplate(id: number): Promise<Template> {
-    const response = await apiClient.request<TemplateResponse>(`/templates/${id}`);
+    const response = await apiClient.get<TemplateResponse>(`/templates/${id}`);
     return response.template;
   }
 
@@ -53,10 +53,7 @@ export class TemplateApi {
    * Create new template
    */
   static async createTemplate(data: CreateTemplateRequest): Promise<Template> {
-    const response = await apiClient.request<TemplateResponse>('/templates', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const response = await apiClient.post<TemplateResponse>('/templates', data);
     return response.template;
   }
 
@@ -64,10 +61,7 @@ export class TemplateApi {
    * Update template
    */
   static async updateTemplate(id: number, data: UpdateTemplateRequest): Promise<Template> {
-    const response = await apiClient.request<TemplateResponse>(`/templates/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+    const response = await apiClient.put<TemplateResponse>(`/templates/${id}`, data);
     return response.template;
   }
 
@@ -75,9 +69,7 @@ export class TemplateApi {
    * Delete template (soft delete)
    */
   static async deleteTemplate(id: number): Promise<void> {
-    await apiClient.request<TemplateActionResponse>(`/templates/${id}`, {
-      method: 'DELETE',
-    });
+    await apiClient.delete<TemplateActionResponse>(`/templates/${id}`);
   }
 
   /**
@@ -91,7 +83,7 @@ export class TemplateApi {
     const query = params.toString();
     const endpoint = `/templates/popular${query ? `?${query}` : ''}`;
     
-    const response = await apiClient.request<TemplatesResponse>(endpoint);
+    const response = await apiClient.get<TemplatesResponse>(endpoint);
     return response.templates;
   }
 
@@ -106,7 +98,7 @@ export class TemplateApi {
     const query = params.toString();
     const endpoint = `/templates/recent${query ? `?${query}` : ''}`;
     
-    const response = await apiClient.request<TemplatesResponse>(endpoint);
+    const response = await apiClient.get<TemplatesResponse>(endpoint);
     return response.templates;
   }
 
@@ -121,7 +113,7 @@ export class TemplateApi {
     const queryString = params.toString();
     const endpoint = `/templates/search?${queryString}`;
     
-    const response = await apiClient.request<TemplatesResponse>(endpoint);
+    const response = await apiClient.get<TemplatesResponse>(endpoint);
     return response.templates;
   }
 
@@ -129,21 +121,16 @@ export class TemplateApi {
    * Increment template usage count
    */
   static async useTemplate(id: number): Promise<void> {
-    await apiClient.request<TemplateActionResponse>(`/templates/${id}/use`, {
-      method: 'POST',
-    });
+    await apiClient.post<TemplateActionResponse>(`/templates/${id}/use`);
   }
 
   /**
    * Clone a template
    */
   static async cloneTemplate(id: number, name: string, createdBy?: string): Promise<Template> {
-    const response = await apiClient.request<TemplateResponse>(`/templates/${id}/clone`, {
-      method: 'POST',
-      body: JSON.stringify({
-        name,
-        created_by: createdBy || 'user',
-      }),
+    const response = await apiClient.post<TemplateResponse>(`/templates/${id}/clone`, {
+      name,
+      created_by: createdBy || 'user',
     });
     return response.template;
   }
@@ -152,24 +139,30 @@ export class TemplateApi {
    * Get public templates (convenience method)
    */
   static async getPublicTemplates(type?: 'anime' | 'alien'): Promise<Template[]> {
-    return this.getTemplates({
+    const filters: TemplateFilters = {
       public_only: true,
-      type,
       order_by: 'usage_count',
       order_direction: 'desc',
-    });
+    };
+    if (type) {
+      filters.type = type;
+    }
+    return this.getTemplates(filters);
   }
 
   /**
    * Get user's templates (convenience method)
    */
   static async getUserTemplates(createdBy: string, type?: 'anime' | 'alien'): Promise<Template[]> {
-    return this.getTemplates({
+    const filters: TemplateFilters = {
       created_by: createdBy,
-      type,
       order_by: 'created_at',
       order_direction: 'desc',
-    });
+    };
+    if (type) {
+      filters.type = type;
+    }
+    return this.getTemplates(filters);
   }
 
   /**

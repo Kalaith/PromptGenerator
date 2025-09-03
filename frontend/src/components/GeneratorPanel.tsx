@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi, TemplateApi, Template } from '../api';
+import { PromptApi, TemplateApi, Template, SpeciesData } from '../api';
 
 const GeneratorPanel: React.FC = () => {
   const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');
@@ -22,9 +22,10 @@ const GeneratorPanel: React.FC = () => {
       try {
         // Load species
         const speciesResponse = await PromptApi.getSpecies();
-        const speciesNames = speciesResponse.species
-          .filter(s => s.is_active)
-          .map(s => s.name);
+        const species = speciesResponse.data.species;
+        const speciesNames = species
+          .filter((s: SpeciesData) => s.is_active !== false) // Handle missing is_active field
+          .map((s: SpeciesData) => s.name);
         setAvailableSpecies(speciesNames);
 
         // Load anime templates
@@ -52,26 +53,29 @@ const GeneratorPanel: React.FC = () => {
     const safeCount = Number.isFinite(Number(promptCount)) ? Math.max(1, Math.floor(Number(promptCount))) : 1;
     
     try {
-      let generationParams = {
-        count: safeCount,
-        type: type === 'random' ? 'animalGirl' : type, // Default to animalGirl for random
-        species: species === 'random' ? undefined : species,
-      };
-
-      // Apply template if selected
-      if (selectedTemplate) {
-        generationParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
-        // Increment template usage count
-        try {
-          await TemplateApi.useTemplate(selectedTemplate.id);
-        } catch (err) {
-          console.warn('Failed to update template usage:', err);
+        let generationParams: GeneratePromptsRequest = {
+          count: safeCount,
+          type: type === 'random' ? 'animalGirl' : type, // Default to animalGirl for random
+        };
+        
+        // Only add species if it's not random
+        if (species !== 'random') {
+          generationParams.species = species;
         }
-      }
 
-      const apiPrompts = await generateAnimePrompts(generationParams);
-      
-      if (apiPrompts.length > 0) {
+        // Apply template if selected
+        if (selectedTemplate) {
+          const templateAppliedParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
+          generationParams = { ...generationParams, ...templateAppliedParams };
+          // Increment template usage count
+          try {
+            await TemplateApi.useTemplate(selectedTemplate.id);
+          } catch (err) {
+            console.warn('Failed to update template usage:', err);
+          }
+        }
+
+        const apiPrompts = await generateAnimePrompts(generationParams);      if (apiPrompts.length > 0) {
         addGeneratedPrompts(apiPrompts);
         
         // Add to history

@@ -19,7 +19,7 @@ export class SessionApi {
   // Get user session
   static async getSession(sessionId: string): Promise<SessionResponse> {
     return apiClient.get<SessionResponse>(
-      `/api/v1/session?session_id=${encodeURIComponent(sessionId)}`
+      `/session?session_id=${encodeURIComponent(sessionId)}`
     );
   }
 
@@ -28,7 +28,7 @@ export class SessionApi {
     sessionId: string,
     promptId: string
   ): Promise<SessionActionResponse> {
-    return apiClient.post<SessionActionResponse>('/api/v1/session/favorites/add', {
+    return apiClient.post<SessionActionResponse>('/session/favorites/add', {
       session_id: sessionId,
       prompt_id: promptId,
     });
@@ -40,7 +40,7 @@ export class SessionApi {
     promptId: string
   ): Promise<SessionActionResponse> {
     return apiClient.post<SessionActionResponse>(
-      '/api/v1/session/favorites/remove',
+      '/session/favorites/remove',
       {
         session_id: sessionId,
         prompt_id: promptId,
@@ -53,7 +53,7 @@ export class SessionApi {
     sessionId: string,
     prompt: any
   ): Promise<SessionActionResponse> {
-    return apiClient.post<SessionActionResponse>('/api/v1/session/history/add', {
+    return apiClient.post<SessionActionResponse>('/session/history/add', {
       session_id: sessionId,
       prompt,
     });
@@ -61,7 +61,7 @@ export class SessionApi {
 
   // Clear history
   static async clearHistory(sessionId: string): Promise<SessionActionResponse> {
-    return apiClient.post<SessionActionResponse>('/api/v1/session/history/clear', {
+    return apiClient.post<SessionActionResponse>('/session/history/clear', {
       session_id: sessionId,
     });
   }
@@ -71,7 +71,7 @@ export class SessionApi {
     sessionId: string,
     preferences: Record<string, any>
   ): Promise<SessionActionResponse> {
-    return apiClient.post<SessionActionResponse>('/api/v1/session/preferences', {
+    return apiClient.post<SessionActionResponse>('/session/preferences', {
       session_id: sessionId,
       preferences,
     });
