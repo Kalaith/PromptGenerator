@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { PromptApi } from '../api';
+import { AppError, AppErrorHandler } from '../types/errors';
 import type {
   GeneratePromptsRequest,
   GenerateAlienRequest,
@@ -9,7 +10,7 @@ import type {
 
 interface UsePromptGenerationState {
   loading: boolean;
-  error: string | null;
+  error: AppError | null;
 }
 
 interface UsePromptGenerationResult extends UsePromptGenerationState {
@@ -24,16 +25,38 @@ export const usePromptGeneration = (): UsePromptGenerationResult => {
     loading: false,
     error: null,
   });
+  
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
-  const setLoading = useCallback((loading: boolean) => {
-    setState(prev => ({ ...prev, loading }));
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
-  const setError = useCallback((error: string | null) => {
-    setState(prev => ({ ...prev, error }));
+  const setLoading = useCallback((loading: boolean) => {
+    if (isMountedRef.current) {
+      setState(prev => ({ ...prev, loading }));
+    }
+  }, []);
+
+  const setError = useCallback((error: AppError | null) => {
+    if (isMountedRef.current) {
+      setState(prev => ({ ...prev, error }));
+    }
   }, []);
 
   const generateAnimePrompts = useCallback(async (request: GeneratePromptsRequest): Promise<ApiPrompt[]> => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
+    
     try {
       setLoading(true);
       setError(null);
@@ -46,11 +69,14 @@ export const usePromptGeneration = (): UsePromptGenerationResult => {
       
       return response.data.image_prompts || [];
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate anime prompts';
-      setError(errorMessage);
-      throw error;
+      const appError = (error && typeof error === 'object' && 'type' in error) 
+        ? error as AppError 
+        : AppErrorHandler.fromApiError(error);
+      setError(appError);
+      throw appError;
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   }, [setLoading, setError]);
 
@@ -67,9 +93,11 @@ export const usePromptGeneration = (): UsePromptGenerationResult => {
       
       return response.image_prompts || [];
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate alien prompts';
-      setError(errorMessage);
-      throw error;
+      const appError = (error && typeof error === 'object' && 'type' in error) 
+        ? error as AppError 
+        : AppErrorHandler.fromApiError(error);
+      setError(appError);
+      throw appError;
     } finally {
       setLoading(false);
     }
@@ -88,9 +116,11 @@ export const usePromptGeneration = (): UsePromptGenerationResult => {
       
       return response.image_prompts || [];
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate adventurer prompts';
-      setError(errorMessage);
-      throw error;
+      const appError = (error && typeof error === 'object' && 'type' in error) 
+        ? error as AppError 
+        : AppErrorHandler.fromApiError(error);
+      setError(appError);
+      throw appError;
     } finally {
       setLoading(false);
     }

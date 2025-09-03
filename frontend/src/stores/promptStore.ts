@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { APP_CONSTANTS } from '../constants/app';
 import type { Prompt } from '../types/Prompt';
 import type { ApiPrompt } from '../api/types';
 
@@ -67,7 +68,7 @@ export const usePromptStore = create<PromptStore>()(
           return {
             generatedPrompts: [...state.generatedPrompts, ...newPrompts],
             localHistory: state.localPreferences.saveHistory
-              ? [...state.localHistory, ...newPrompts].slice(-50) // Keep last 50
+              ? [...state.localHistory, ...newPrompts].slice(-APP_CONSTANTS.HISTORY.MAX_ITEMS)
               : state.localHistory,
           };
         }),
@@ -106,7 +107,7 @@ export const usePromptStore = create<PromptStore>()(
       convertApiPrompts: (apiPrompts) => apiPrompts.map(convertApiPrompt),
     }),
     {
-      name: 'anime-prompt-storage',
+      name: APP_CONSTANTS.STORAGE.STORE_NAME,
       partialize: (state) => ({
         localFavorites: state.localFavorites,
         localHistory: state.localHistory,

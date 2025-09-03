@@ -1,3 +1,6 @@
+import { config } from '../config/app';
+import { AppErrorHandler, ErrorType } from '../types/errors';
+
 interface ApiResponse<T> {
   data?: T;
   success?: boolean;
@@ -40,16 +43,28 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw AppErrorHandler.createError(
+          ErrorType.API,
+          errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+          response.status.toString(),
+          { status: response.status, statusText: response.statusText }
+        );
       }
 
       return await response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof Error) {
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw AppErrorHandler.createError(ErrorType.TIMEOUT, 'Request timed out');
+      }
+      
+      if (error && typeof error === 'object' && 'type' in error) {
         throw error;
       }
-      throw new Error('An unknown error occurred');
+      
+      throw AppErrorHandler.fromApiError(error);
     }
   }
 
@@ -77,9 +92,6 @@ class ApiClient {
 }
 
 // Create and export the API client instance
-export const apiClient = new ApiClient({
-  baseUrl: (import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
-  timeout: 30000, // 30 seconds
-});
+export const apiClient = new ApiClient(config.getApi());
 
 export type { ApiResponse };

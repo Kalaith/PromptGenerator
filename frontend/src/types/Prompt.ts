@@ -2,8 +2,10 @@ export type Prompt = {
   id: string;
   title: string;
   description: string;
-  negative_prompt?: string;
+  negativePrompt?: string;
   tags: string[];
+  type: string;
+  timestamp: number;
 };
 
 export type PromptsPayload = {

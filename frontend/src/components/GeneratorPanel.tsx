@@ -3,11 +3,15 @@ import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
 import { PromptApi, TemplateApi, Template, SpeciesData, GeneratePromptsRequest } from '../api';
+import { APP_CONSTANTS, GENERATOR_OPTIONS } from '../constants/app';
+import { ValidationUtils } from '../utils/validation';
+import { GeneratorForm, SelectField, NumberField, FormField } from './shared/GeneratorForm';
+import { AppErrorHandler } from '../types/errors';
 
 const GeneratorPanel: React.FC = () => {
   const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');
   const [species, setSpecies] = useState<string>('random');
-  const [promptCount, setPromptCount] = useState<number>(10);
+  const [promptCount, setPromptCount] = useState<number>(APP_CONSTANTS.PROMPT_COUNT.DEFAULT);
   const [availableSpecies, setAvailableSpecies] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
@@ -50,7 +54,12 @@ const GeneratorPanel: React.FC = () => {
   const handleGenerate = async () => {
     clearError();
     
-    const safeCount = Number.isFinite(Number(promptCount)) ? Math.max(1, Math.floor(Number(promptCount))) : 1;
+    const validation = ValidationUtils.validatePromptCount(promptCount);
+    if (!validation.isValid) {
+      return;
+    }
+    
+    const safeCount = ValidationUtils.sanitizePromptCount(promptCount);
     
     try {
         let generationParams: GeneratePromptsRequest = {
@@ -75,7 +84,9 @@ const GeneratorPanel: React.FC = () => {
           }
         }
 
-        const apiPrompts = await generateAnimePrompts(generationParams);      if (apiPrompts.length > 0) {
+        const apiPrompts = await generateAnimePrompts(generationParams);
+        
+        if (apiPrompts.length > 0) {
         addGeneratedPrompts(apiPrompts);
         
         // Add to history
@@ -103,7 +114,11 @@ const GeneratorPanel: React.FC = () => {
   return (
     <div className="p-4 bg-gray-100 rounded-md shadow-md">
       <h2 className="text-lg font-semibold mb-4">Generator Panel</h2>
-      {error && <div className="mb-4 text-red-600">{error}</div>}
+      {error && (
+        <div className="mb-4 text-red-600">
+          {AppErrorHandler.getDisplayMessage(error)}
+        </div>
+      )}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2" htmlFor="type">
           Type

@@ -3,6 +3,7 @@ import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
 import { PromptApi, TemplateApi, Template, GenerateAlienRequest } from '../api';
+import { AppErrorHandler } from '../types/errors';
 
 const AlienGeneratorPanel: React.FC = () => {
   const [speciesClass, setSpeciesClass] = useState<string>('random');
@@ -118,7 +119,11 @@ const AlienGeneratorPanel: React.FC = () => {
   return (
     <div className="p-4 bg-gray-100 rounded-md shadow-md">
       <h2 className="text-lg font-semibold mb-4">Alien Generator Panel</h2>
-      {error && <div className="mb-4 text-red-600">{error}</div>}
+      {error && (
+        <div className="mb-4 text-red-600">
+          {AppErrorHandler.getDisplayMessage(error)}
+        </div>
+      )}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2" htmlFor="speciesClass">
           Species Class
