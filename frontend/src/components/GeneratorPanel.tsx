@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi, TemplateApi, Template, SpeciesData } from '../api';
+import { PromptApi, TemplateApi, Template, SpeciesData, GeneratePromptsRequest } from '../api';
 
 const GeneratorPanel: React.FC = () => {
   const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');

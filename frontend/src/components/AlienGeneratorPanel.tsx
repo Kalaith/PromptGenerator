@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { PromptApi, TemplateApi, Template } from '../api';
+import { PromptApi, TemplateApi, Template, GenerateAlienRequest } from '../api';
 
 const AlienGeneratorPanel: React.FC = () => {
   const [speciesClass, setSpeciesClass] = useState<string>('random');
@@ -49,20 +49,37 @@ const AlienGeneratorPanel: React.FC = () => {
     const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
     
     try {
-      let generationParams = {
+      let generationParams: GenerateAlienRequest = {
         count: safeCount,
-        species_class: speciesClass === 'random' ? undefined : speciesClass,
-        climate: climate === 'random' ? undefined : climate,
-        positive_trait: positiveTrait === 'random' ? undefined : positiveTrait,
-        negative_trait: negativeTrait === 'random' ? undefined : negativeTrait,
-        style: style === 'random' ? undefined : style,
-        environment: environment === 'random' ? undefined : environment,
-        gender: gender === 'random' ? undefined : gender,
       };
+
+      // Only add parameters if they're not random
+      if (speciesClass !== 'random') {
+        generationParams.species_class = speciesClass;
+      }
+      if (climate !== 'random') {
+        generationParams.climate = climate;
+      }
+      if (positiveTrait !== 'random') {
+        generationParams.positive_trait = positiveTrait;
+      }
+      if (negativeTrait !== 'random') {
+        generationParams.negative_trait = negativeTrait;
+      }
+      if (style !== 'random') {
+        generationParams.style = style;
+      }
+      if (environment !== 'random') {
+        generationParams.environment = environment;
+      }
+      if (gender !== 'random') {
+        generationParams.gender = gender;
+      }
 
       // Apply template if selected
       if (selectedTemplate) {
-        generationParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
+        const templateAppliedParams = TemplateApi.applyTemplate(selectedTemplate, generationParams);
+        generationParams = { ...generationParams, ...templateAppliedParams };
         // Increment template usage count
         try {
           await TemplateApi.useTemplate(selectedTemplate.id);

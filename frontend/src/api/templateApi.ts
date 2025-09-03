@@ -169,9 +169,9 @@ export class TemplateApi {
    * Apply template to generation parameters
    * This is a client-side utility function
    */
-  static applyTemplate(template: Template, parameters: Record<string, any>): Record<string, any> {
+  static applyTemplate<T extends Record<string, unknown>>(template: Template, parameters: T): Partial<T> {
     const templateData = template.template_data;
-    const result = { ...parameters };
+    const result: Record<string, unknown> = { ...parameters };
 
     // Merge template data with parameters, giving precedence to user parameters
     for (const [key, value] of Object.entries(templateData)) {
@@ -180,13 +180,13 @@ export class TemplateApi {
       }
     }
 
-    return result;
+    return result as Partial<T>;
   }
 
   /**
    * Validate template data structure based on type
    */
-  static validateTemplateData(templateData: Record<string, any>, type: 'anime' | 'alien'): string[] {
+  static validateTemplateData(templateData: Record<string, unknown>, type: 'anime' | 'alien'): string[] {
     const errors: string[] = [];
 
     if (!templateData || typeof templateData !== 'object') {

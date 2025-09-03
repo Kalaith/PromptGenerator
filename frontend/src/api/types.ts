@@ -71,7 +71,7 @@ export interface Template {
   name: string;
   description?: string;
   type: 'anime' | 'alien';
-  template_data: Record<string, any>;
+  template_data: Record<string, unknown>;
   is_public: boolean;
   is_active: boolean;
   created_by?: string;
@@ -84,7 +84,7 @@ export interface CreateTemplateRequest {
   name: string;
   description?: string;
   type: 'anime' | 'alien';
-  template_data: Record<string, any>;
+  template_data: Record<string, unknown>;
   is_public?: boolean;
   created_by?: string;
 }
@@ -92,7 +92,7 @@ export interface CreateTemplateRequest {
 export interface UpdateTemplateRequest {
   name?: string;
   description?: string;
-  template_data?: Record<string, any>;
+  template_data?: Record<string, unknown>;
   is_public?: boolean;
 }
 
