@@ -1,50 +1,77 @@
 import React, { useEffect, useState } from 'react';
-import { animalGirlData } from '../utils/animalGirlData';
-import { monsterData } from '../utils/monsterData';
-import { monsterGirlData } from '../utils/monsterGirlData';
-import { generatePrompts } from '../utils/promptGenerator';
-import { SpeciesData } from '../types/SpeciesData';
 import { usePromptStore } from '../stores/promptStore';
-
-type DataSources = Record<string, Record<string, SpeciesData>>;
-
-const dataSources: DataSources = {
-  animalGirl: animalGirlData,
-  monster: monsterData,
-  monsterGirl: monsterGirlData,
-};
+import { usePromptGeneration } from '../hooks/usePromptGeneration';
+import { useSession } from '../hooks/useSession';
+import { PromptApi } from '../api';
 
 const GeneratorPanel: React.FC = () => {
   const [type, setType] = useState<'animalGirl' | 'monster' | 'monsterGirl' | 'random'>('random');
-  const [species, setSpecies] = useState<string>(() => 'random');
+  const [species, setSpecies] = useState<string>('random');
   const [promptCount, setPromptCount] = useState<number>(10);
-  const [error, setError] = useState<string | null>(null);
+  const [availableSpecies, setAvailableSpecies] = useState<string[]>([]);
   
   const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
+  const { generateAnimePrompts, loading, error, clearError } = usePromptGeneration();
+  const { addToHistory } = useSession();
 
-  const data = type === 'random' ? undefined : dataSources[type as keyof typeof dataSources];
+  // Load available species from backend
+  useEffect(() => {
+    const loadSpecies = async () => {
+      try {
+        const response = await PromptApi.getSpecies();
+        const speciesNames = response.species
+          .filter(s => s.is_active)
+          .map(s => s.name);
+        setAvailableSpecies(speciesNames);
+      } catch (error) {
+        console.error('Failed to load species:', error);
+        // Fallback to empty array - user can still generate with random
+        setAvailableSpecies([]);
+      }
+    };
+
+    loadSpecies();
+  }, []);
 
   useEffect(() => {
-    // When the type changes, set species to 'random' unless a concrete type is chosen
-    if (type === 'random') {
-      setSpecies('random');
-      return;
-    }
-
-    const defaultSpecies = Object.keys(dataSources[type as keyof typeof dataSources] || {})[0] ?? 'random';
-    setSpecies(defaultSpecies);
+    // When the type changes, reset species to random
+    setSpecies('random');
   }, [type]);
 
-  const handleGenerate = () => {
-    setError(null);
-    const safeCount = Number.isFinite(Number(promptCount)) ? Math.max(1, Math.floor(Number(promptCount))) : 1;
-    const result = generatePrompts(safeCount, type, species);
-    if (result.errors && result.errors.length) {
-      setError(result.errors.join('; '));
-    }
+  const handleGenerate = async () => {
+    clearError();
     
-    if (result.image_prompts && result.image_prompts.length > 0) {
-      addGeneratedPrompts(result.image_prompts);
+    const safeCount = Number.isFinite(Number(promptCount)) ? Math.max(1, Math.floor(Number(promptCount))) : 1;
+    
+    try {
+      const apiPrompts = await generateAnimePrompts({
+        count: safeCount,
+        type: type === 'random' ? 'animalGirl' : type, // Default to animalGirl for random
+        species: species === 'random' ? undefined : species,
+      });
+      
+      if (apiPrompts.length > 0) {
+        addGeneratedPrompts(apiPrompts);
+        
+        // Add to history
+        for (const prompt of apiPrompts) {
+          try {
+            await addToHistory({
+              id: prompt.id,
+              title: prompt.title,
+              description: prompt.description,
+              type: prompt.prompt_type,
+              timestamp: new Date().toISOString(),
+            });
+          } catch (historyError) {
+            console.warn('Failed to add to history:', historyError);
+            // Continue - don't block UI for history failures
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Generation failed:', error);
+      // Error is already set by the hook
     }
   };
 
@@ -61,13 +88,12 @@ const GeneratorPanel: React.FC = () => {
           value={type}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value as 'animalGirl' | 'monster' | 'monsterGirl' | 'random')}
           className="w-full p-2 border border-gray-300 rounded-md"
+          disabled={loading}
         >
-          <option key="random" value="random">Random</option>
-          {Object.keys(dataSources).map((key) => (
-            <option key={key} value={key}>
-              {key.charAt(0).toUpperCase() + key.slice(1)}
-            </option>
-          ))}
+          <option value="random">Random</option>
+          <option value="animalGirl">Animal Girl</option>
+          <option value="monster">Monster</option>
+          <option value="monsterGirl">Monster Girl</option>
         </select>
       </div>
       <div className="mb-4">
@@ -79,15 +105,14 @@ const GeneratorPanel: React.FC = () => {
           value={species}
           onChange={(e) => setSpecies(e.target.value)}
           className="w-full p-2 border border-gray-300 rounded-md"
+          disabled={loading}
         >
-            <option key="random" value="random">Random</option>
-            {Object.keys(data || {}).map((key) => (
-              <option key={key} value={key}>
-                {data && data[key]
-                  ? `${key} - ${data[key].species.charAt(0).toUpperCase() + data[key].species.slice(1)}`
-                  : key}
-              </option>
-            ))}
+          <option value="random">Random</option>
+          {availableSpecies.map((speciesName) => (
+            <option key={speciesName} value={speciesName}>
+              {speciesName.charAt(0).toUpperCase() + speciesName.slice(1)}
+            </option>
+          ))}
         </select>
       </div>
       <div className="mb-4">
@@ -98,17 +123,19 @@ const GeneratorPanel: React.FC = () => {
           id="promptCount"
           type="number"
           min={1}
-          max={500}
+          max={100}
           value={promptCount}
           onChange={(e) => setPromptCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
           className="w-full p-2 border border-gray-300 rounded-md"
+          disabled={loading}
         />
       </div>
       <button
         onClick={handleGenerate}
-        className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
+        disabled={loading}
+        className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
       >
-        Generate
+        {loading ? 'Generating...' : 'Generate'}
       </button>
     </div>
   );

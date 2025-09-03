@@ -1,8 +1,12 @@
 import React from 'react';
 import { usePromptStore } from '../stores/promptStore';
+import { useSession } from '../hooks/useSession';
 
 const OutputPanel: React.FC = () => {
-  const { generatedPrompts, favorites, addToFavorites, removeFromFavorites } = usePromptStore();
+  const { generatedPrompts } = usePromptStore();
+  const { sessionData, addToFavorites, removeFromFavorites, error } = useSession();
+  
+  const favorites = sessionData?.favorites || [];
   
   const generatedJSON = JSON.stringify(generatedPrompts, null, 2);
 
@@ -21,17 +25,28 @@ const OutputPanel: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const toggleFavorite = (promptId: string) => {
-    if (favorites.includes(promptId)) {
-      removeFromFavorites(promptId);
-    } else {
-      addToFavorites(promptId);
+  const toggleFavorite = async (promptId: string) => {
+    try {
+      if (favorites.includes(promptId)) {
+        await removeFromFavorites(promptId);
+      } else {
+        await addToFavorites(promptId);
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      // Show user-friendly error - could implement a toast notification here
     }
   };
 
   return (
     <div className="p-4 bg-gray-100 rounded-md shadow-md">
       <h2 className="text-lg font-semibold mb-4">Generated Prompts ({generatedPrompts.length})</h2>
+      
+      {error && (
+        <div className="mb-4 text-red-600 bg-red-50 p-2 rounded border">
+          Session error: {error}
+        </div>
+      )}
       
       {generatedPrompts.length === 0 ? (
         <div className="text-gray-500 text-center py-8">
@@ -45,9 +60,9 @@ const OutputPanel: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <p className="font-medium text-sm">{prompt.description}</p>
-                    {prompt.negative_prompt && (
+                    {prompt.negativePrompt && (
                       <p className="text-gray-600 text-xs mt-1">
-                        <span className="font-medium">Negative:</span> {prompt.negative_prompt}
+                        <span className="font-medium">Negative:</span> {prompt.negativePrompt}
                       </p>
                     )}
                   </div>

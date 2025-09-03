@@ -1,3 +1,5 @@
 # Logs
 mcp
 .env
+mcp-config.json
+frontend/.env.development
