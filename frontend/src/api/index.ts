@@ -3,6 +3,7 @@ export { apiClient } from './client';
 export { PromptApi } from './promptApi';
 export { SessionApi } from './sessionApi';
 export { TemplateApi } from './templateApi';
+export { DescriptionTemplateApi } from './descriptionTemplateApi';
 
 // Export types
 export type { ApiResponse } from './client';
@@ -37,3 +38,12 @@ export type {
   TemplateResponse,
   TemplateActionResponse,
 } from './templateApi';
+
+export type {
+  DescriptionTemplate,
+  CreateDescriptionTemplateRequest,
+  UpdateDescriptionTemplateRequest,
+  DescriptionTemplatesResponse,
+  DescriptionTemplateResponse,
+  DescriptionTemplateActionResponse,
+} from './descriptionTemplateApi';

@@ -8,20 +8,12 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Trash2, Edit, Plus, Eye, Save, X } from 'lucide-react';
-
-interface Template {
-  id: number;
-  name: string;
-  generator_type: string;
-  template: string;
-  description: string;
-  is_active: boolean;
-  is_default: boolean;
-  available_placeholders: string[];
-  preview: string;
-  created_at: string;
-  updated_at: string;
-}
+import { 
+  DescriptionTemplateApi, 
+  DescriptionTemplate, 
+  CreateDescriptionTemplateRequest,
+  UpdateDescriptionTemplateRequest 
+} from '../api';
 
 interface TemplateFormData {
   name: string;
@@ -40,9 +32,9 @@ const GENERATOR_TYPES = [
 ];
 
 export function DescriptionTemplateManager() {
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<DescriptionTemplate[]>([]);
   const [selectedType, setSelectedType] = useState<string>('adventurer');
-  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<DescriptionTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<TemplateFormData>({
     name: '',
@@ -63,14 +55,8 @@ export function DescriptionTemplateManager() {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/description-templates?generator_type=${selectedType}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setTemplates(data.data);
-      } else {
-        setError('Failed to fetch templates');
-      }
+      const templates = await DescriptionTemplateApi.getByGeneratorType(selectedType);
+      setTemplates(templates);
     } catch (err) {
       setError('Network error while fetching templates');
     } finally {
@@ -78,7 +64,7 @@ export function DescriptionTemplateManager() {
     }
   };
 
-  const handleEdit = (template: Template) => {
+  const handleEdit = (template: DescriptionTemplate) => {
     setEditingTemplate(template);
     setFormData({
       name: template.name,
@@ -109,31 +95,22 @@ export function DescriptionTemplateManager() {
       setError(null);
       setLoading(true);
 
-      const url = editingTemplate 
-        ? `/api/description-templates/${editingTemplate.id}`
-        : '/api/description-templates';
+      let response;
+      if (editingTemplate) {
+        response = await DescriptionTemplateApi.update(editingTemplate.id, formData);
+      } else {
+        response = await DescriptionTemplateApi.create(formData);
+      }
       
-      const method = editingTemplate ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
+      if (response.success) {
         setSuccess(editingTemplate ? 'Template updated successfully!' : 'Template created successfully!');
         setEditingTemplate(null);
         setIsCreating(false);
         fetchTemplates();
       } else {
-        setError(data.error || 'Failed to save template');
-        if (data.validation_errors) {
-          setError(`Validation errors: ${data.validation_errors.join(', ')}`);
+        setError(response.error || 'Failed to save template');
+        if (response.validation_errors) {
+          setError(`Validation errors: ${response.validation_errors.join(', ')}`);
         }
       }
     } catch (err) {
@@ -143,22 +120,18 @@ export function DescriptionTemplateManager() {
     }
   };
 
-  const handleDelete = async (template: Template) => {
+  const handleDelete = async (template: DescriptionTemplate) => {
     if (!confirm(`Are you sure you want to delete "${template.name}"?`)) return;
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/description-templates/${template.id}`, {
-        method: 'DELETE'
-      });
-
-      const data = await response.json();
+      const response = await DescriptionTemplateApi.delete(template.id);
       
-      if (data.success) {
+      if (response.success) {
         setSuccess('Template deleted successfully!');
         fetchTemplates();
       } else {
-        setError(data.error || 'Failed to delete template');
+        setError(response.error || 'Failed to delete template');
       }
     } catch (err) {
       setError('Network error while deleting template');
@@ -288,7 +261,7 @@ export function DescriptionTemplateManager() {
                             <label className="block text-sm font-medium mb-1">Name</label>
                             <Input
                               value={formData.name}
-                              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                               placeholder="Template name"
                             />
                           </div>
@@ -296,7 +269,7 @@ export function DescriptionTemplateManager() {
                             <label className="block text-sm font-medium mb-1">Generator Type</label>
                             <Select 
                               value={formData.generator_type} 
-                              onValueChange={(value) => setFormData(prev => ({ ...prev, generator_type: value }))}
+                              onValueChange={(value: string) => setFormData(prev => ({ ...prev, generator_type: value }))}
                             >
                               <SelectTrigger>
                                 <SelectValue />
@@ -316,7 +289,7 @@ export function DescriptionTemplateManager() {
                           <label className="block text-sm font-medium mb-1">Description</label>
                           <Input
                             value={formData.description}
-                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                             placeholder="Template description (optional)"
                           />
                         </div>
@@ -327,7 +300,7 @@ export function DescriptionTemplateManager() {
                               type="checkbox"
                               id="is_active"
                               checked={formData.is_active}
-                              onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
                             />
                             <label htmlFor="is_active" className="text-sm font-medium">Active</label>
                           </div>
@@ -336,7 +309,7 @@ export function DescriptionTemplateManager() {
                               type="checkbox"
                               id="is_default"
                               checked={formData.is_default}
-                              onChange={(e) => setFormData(prev => ({ ...prev, is_default: e.target.checked }))}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, is_default: e.target.checked }))}
                             />
                             <label htmlFor="is_default" className="text-sm font-medium">Set as Default</label>
                           </div>
@@ -349,7 +322,7 @@ export function DescriptionTemplateManager() {
                               <Textarea
                                 name="template"
                                 value={formData.template}
-                                onChange={(e) => setFormData(prev => ({ ...prev, template: e.target.value }))}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, template: e.target.value }))}
                                 placeholder="Enter your template with {placeholder} variables"
                                 rows={8}
                               />
@@ -362,7 +335,7 @@ export function DescriptionTemplateManager() {
                               <div className="space-y-1 max-h-48 overflow-y-auto">
                                 {(editingTemplate?.available_placeholders || 
                                   templates.find(t => t.generator_type === formData.generator_type)?.available_placeholders || 
-                                  []).map(placeholder => (
+                                  []).map((placeholder: string) => (
                                   <Button
                                     key={placeholder}
                                     variant="outline"
