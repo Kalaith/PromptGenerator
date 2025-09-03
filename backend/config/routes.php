@@ -51,13 +51,13 @@ return function (App $app) {
         $group->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
         
         // Description template routes (specific routes must come before parameterized routes)
-        $group->get('/description-templates', [DescriptionTemplateController::class, 'getAll']);
+        $group->get('/description-templates', [DescriptionTemplateController::class, 'getTemplates']);
         $group->get('/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
-        $group->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'generateBulk']);
-        $group->post('/description-templates', [DescriptionTemplateController::class, 'create']);
-        $group->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getById']);
-        $group->put('/description-templates/{id}', [DescriptionTemplateController::class, 'update']);
-        $group->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'delete']);
+        $group->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates']);
+        $group->post('/description-templates', [DescriptionTemplateController::class, 'createTemplate']);
+        $group->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getTemplate']);
+        $group->put('/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
+        $group->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
         
         // Health check
         $group->get('/health', function ($request, $response) {
@@ -83,13 +83,13 @@ return function (App $app) {
     $app->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
     
     // Description template routes (direct access - specific routes must come before parameterized routes)
-    $app->get('/description-templates', [DescriptionTemplateController::class, 'getAll']);
+    $app->get('/description-templates', [DescriptionTemplateController::class, 'getTemplates']);
     $app->get('/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
-    $app->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'generateBulk']);
-    $app->post('/description-templates', [DescriptionTemplateController::class, 'create']);
-    $app->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getById']);
-    $app->put('/description-templates/{id}', [DescriptionTemplateController::class, 'update']);
-    $app->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'delete']);
+    $app->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates']);
+    $app->post('/description-templates', [DescriptionTemplateController::class, 'createTemplate']);
+    $app->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getTemplate']);
+    $app->put('/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
+    $app->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
     
     $app->get('/species', [SpeciesController::class, 'getAll']);
     $app->get('/species/types', [SpeciesController::class, 'getTypes']);

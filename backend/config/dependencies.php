@@ -7,6 +7,8 @@ use AnimePromptGen\Controllers\AdventurerController;
 use AnimePromptGen\Controllers\AlienController;
 use AnimePromptGen\Controllers\UserSessionController;
 use AnimePromptGen\Controllers\SpeciesController;
+use AnimePromptGen\Controllers\TemplateController;
+use AnimePromptGen\Controllers\DescriptionTemplateController;
 use AnimePromptGen\Actions\GeneratePromptsAction;
 use AnimePromptGen\Actions\GenerateAdventurerAction;
 use AnimePromptGen\Actions\GenerateAlienAction;
@@ -18,6 +20,8 @@ use AnimePromptGen\External\AdventurerClassRepository;
 use AnimePromptGen\External\AlienSpeciesRepository;
 use AnimePromptGen\External\AlienTraitRepository;
 use AnimePromptGen\External\UserSessionRepository;
+use AnimePromptGen\External\TemplateRepository;
+use AnimePromptGen\External\DescriptionTemplateRepository;
 use AnimePromptGen\Services\PromptGenerationService;
 use AnimePromptGen\Services\AdventurerGenerationService;
 use AnimePromptGen\Services\AlienGenerationService;
@@ -32,6 +36,8 @@ return [
     AlienSpeciesRepository::class => \DI\autowire(),
     AlienTraitRepository::class => \DI\autowire(),
     UserSessionRepository::class => \DI\autowire(),
+    TemplateRepository::class => \DI\autowire(),
+    DescriptionTemplateRepository::class => \DI\autowire(),
 
     // Services
     RandomGeneratorService::class => \DI\autowire(),
@@ -51,4 +57,6 @@ return [
     AlienController::class => \DI\autowire(),
     UserSessionController::class => \DI\autowire(),
     SpeciesController::class => \DI\autowire(),
+    TemplateController::class => \DI\autowire(),
+    DescriptionTemplateController::class => \DI\autowire(),
 ];
