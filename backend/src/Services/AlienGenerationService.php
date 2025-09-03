@@ -7,44 +7,23 @@ namespace AnimePromptGen\Services;
 use AnimePromptGen\External\AlienSpeciesRepository;
 use AnimePromptGen\External\AlienTraitRepository;
 use AnimePromptGen\External\AttributeRepository;
+use AnimePromptGen\External\GameAssetRepository;
 use AnimePromptGen\Models\AlienSpecies;
 use AnimePromptGen\Models\AlienTrait;
 
-final class AlienGenerationService
+final class AlienGenerationService extends BaseGenerationService
 {
-    private const CLIMATES = [
-        'wet' => ['Continental', 'Ocean', 'Tropical'],
-        'dry' => ['Savanna', 'Alpine', 'Steppe'],
-        'cold' => ['Desert', 'Tundra', 'Arctic']
-    ];
-
-    private const GENDERS = ['male', 'female'];
-
-    private const ARTISTIC_STYLES = [
-        'cyberpunk', 'fantasy', 'realistic', 'surreal', 'biomechanical', 
-        'retro-futuristic', 'minimalist', 'baroque'
-    ];
-
-    private const ENVIRONMENTS = [
-        'futuristic cityscape', 'alien jungle', 'desolate wasteland', 'underwater city', 
-        'orbital space station', 'volcanic landscape', 'crystalline cavern', 'floating sky islands', 
-        'toxic swamp', 'ancient ruins'
-    ];
-
-    private const CULTURAL_ARTIFACTS = [
-        'ceremonial staff', 'holographic data slate', 'glowing amulet', 'intricate blade', 
-        'tribal mask', 'bioluminescent orb', 'ancient relic', 'futuristic headset', 
-        'ornate scepter', 'mechanical prosthetic'
-    ];
-
     public function __construct(
         private readonly AlienSpeciesRepository $alienSpeciesRepository,
         private readonly AlienTraitRepository $alienTraitRepository,
-        private readonly AttributeRepository $attributeRepository,
-        private readonly RandomGeneratorService $randomGenerator
-    ) {}
+        AttributeRepository $attributeRepository,
+        GameAssetRepository $gameAssetRepository,
+        RandomGeneratorService $randomGenerator
+    ) {
+        parent::__construct($attributeRepository, $gameAssetRepository, $randomGenerator);
+    }
 
-    public function generateAlienPromptData(
+    public function generatePromptData(
         ?string $speciesClass = null,
         ?string $climate = null,
         ?string $positiveTrait = null,
@@ -70,23 +49,24 @@ final class AlienGenerationService
         $selectedClimate = $climate ?? $this->generateRandomClimate();
 
         // Generate gender
-        $selectedGender = $gender ?? $this->randomGenerator->getRandomElement(self::GENDERS);
+        $selectedGender = $gender ?? $this->getRandomGender();
 
         // Generate traits
         $positiveTrait = $this->getTraitForGeneration('positive', $positiveTrait);
         $negativeTrait = $this->getTraitForGeneration('negative', $negativeTrait);
 
         // Generate artistic style
-        $selectedStyle = $style ?? $this->randomGenerator->getRandomElement(self::ARTISTIC_STYLES);
+        $selectedStyle = $style ?? $this->getRandomArtisticStyle();
 
         // Generate environment
-        $selectedEnvironment = $environment ?? $this->randomGenerator->getRandomElement(self::ENVIRONMENTS);
+        $selectedEnvironment = $environment ?? $this->getRandomEnvironment();
 
         // Generate cultural artifact
-        $selectedArtifact = $this->randomGenerator->getRandomElement(self::CULTURAL_ARTIFACTS);
+        $selectedArtifact = $this->getRandomCulturalArtifact();
 
-        // Generate physical attributes adapted to species
-        $attributes = $this->generateAlienAttributes($actualClass);
+        // Generate extended attributes with species adaptations
+        $attributes = $this->generateExtendedAttributes($selectedGender, $selectedStyle, $selectedEnvironment);
+        $attributes = $this->adaptAttributesToSpecies($attributes, $actualClass);
 
         // Generate description
         $description = $this->generateAlienDescription(
@@ -112,18 +92,14 @@ final class AlienGenerationService
             'artifact' => $selectedArtifact,
             'attributes' => $attributes,
             'description' => $description,
-            'negative_prompt' => $this->generateAlienNegativePrompt(),
-            'tags' => $this->generateAlienTags(
+            'negative_prompt' => $this->generateStandardNegativePrompt(),
+            'tags' => $this->generateBaseTags($attributes, [
                 $actualClass, 
                 $selectedClimate, 
-                $positiveTrait, 
-                $negativeTrait, 
-                $selectedStyle, 
-                $selectedEnvironment, 
-                $selectedArtifact, 
-                $selectedGender, 
-                $attributes
-            )
+                $positiveTrait?->name ?? '', 
+                $negativeTrait?->name ?? '', 
+                $selectedArtifact
+            ])
         ];
     }
 
@@ -151,46 +127,33 @@ final class AlienGenerationService
 
     private function generateRandomClimate(): string
     {
-        $climateType = $this->randomGenerator->getRandomElement(array_keys(self::CLIMATES));
-        return $this->randomGenerator->getRandomElement(self::CLIMATES[$climateType]);
+        $climate = $this->gameAssetRepository->getRandomByType('climate');
+        return $climate ? $climate->name : 'Continental';
     }
 
-    private function generateAlienAttributes(string $speciesClass): array
+    public function getAvailableClimates(): array
     {
-        // Adapt attributes based on species type
-        $attributes = [];
+        $climates = $this->gameAssetRepository->getByType('climate');
+        return array_map(fn($climate) => $climate->name, $climates);
+    }
 
+    private function adaptAttributesToSpecies(array $attributes, string $speciesClass): array
+    {
+        // Adapt hair attributes based on species type
         if (in_array($speciesClass, ['Humanoid', 'Mammalian', 'Necroid'])) {
-            // Species that can have traditional hair
-            $attributes['hairColor'] = $this->randomGenerator->getRandomAttribute('hair_colors') ?? 'natural';
-            $attributes['hairStyle'] = $this->randomGenerator->getRandomAttribute('hair_styles') ?? 'standard';
+            // Species that can have traditional hair - keep original attributes
         } elseif ($speciesClass === 'Avian') {
-            // Feathered species - adapt hair to feathers
-            $attributes['hairColor'] = $this->randomGenerator->getRandomAttribute('hair_colors') ?? 'natural';
             $attributes['hairStyle'] = 'feathered crest';
         } elseif ($speciesClass === 'Plantoid') {
-            // Plant species - adapt to leaves/petals
-            $attributes['hairColor'] = $this->randomGenerator->getRandomElement(['green', 'brown', 'yellow', 'red', 'orange']) ?? 'green';
+            $attributes['hairColor'] = $this->randomGenerator->getRandomElement(['green', 'brown', 'yellow', 'red', 'orange']) ?? $attributes['hairColor'];
             $attributes['hairStyle'] = 'leaf-like fronds';
         } elseif ($speciesClass === 'Machine') {
-            // Mechanical species - no traditional hair
             $attributes['hairColor'] = 'metallic';
             $attributes['hairStyle'] = 'synthetic fibers';
         } else {
-            // Other species - more exotic options
-            $attributes['hairColor'] = $this->randomGenerator->getRandomElement(['iridescent', 'bioluminescent', 'crystalline', 'ethereal']) ?? 'iridescent';
+            $attributes['hairColor'] = $this->randomGenerator->getRandomElement(['iridescent', 'bioluminescent', 'crystalline', 'ethereal']) ?? $attributes['hairColor'];
             $attributes['hairStyle'] = 'alien appendages';
         }
-
-        $attributes['eyeColor'] = $this->randomGenerator->getRandomAttribute('eye_colors') ?? 'brown';
-        $attributes['clothing'] = $this->randomGenerator->getRandomAttribute('clothing_items') ?? 'standard clothing';
-        $attributes['accessory'] = $this->randomGenerator->shouldRandomlyOccur(0.5) 
-            ? $this->randomGenerator->getRandomAttribute('accessories') 
-            : 'none';
-        $attributes['facialFeature'] = $this->randomGenerator->getRandomAttribute('facial_features') ?? 'neutral expression';
-        $attributes['pose'] = $this->randomGenerator->getRandomAttribute('poses') ?? 'stands';
-        $attributes['eyeExpression'] = $this->randomGenerator->getRandomAttribute('eye_expressions') ?? 'neutral gaze';
-        $attributes['background'] = $this->randomGenerator->getRandomAttribute('backgrounds') ?? 'neutral background';
 
         return $attributes;
     }
@@ -229,70 +192,21 @@ final class AlienGenerationService
             ? $this->randomGenerator->getRandomElements($species->features, 2)
             : [];
 
-        $description = sprintf(
-            "Portrait of a %s %s alien from a %s world, depicted in a %s style. %s variation. Physical features: %s. Hair: %s %s hair. Eyes: %s eyes that %s. Facial features include %s. Wearing %s with %s. Visual details: %s. The alien %s and %s, %s in %s. Holding a %s. Style elements: %s.",
-            $gender,
-            $species->class,
-            $climate,
-            $style,
-            $variation,
-            implode(', ', $physicalFeatures),
-            $attributes['hairStyle'] ?? 'standard',
-            $attributes['hairColor'] ?? 'natural',
-            $attributes['eyeColor'] ?? 'brown',
-            $attributes['eyeExpression'] ?? 'neutral gaze',
-            $attributes['facialFeature'] ?? 'neutral expression',
-            $attributes['clothing'] ?? 'standard clothing',
-            $attributes['accessory'] ?? 'none',
-            implode(', ', $visualDetails),
-            $posTraitVisual,
-            $negTraitVisual,
-            $attributes['pose'] ?? 'stands',
-            $attributes['background'] ?? 'neutral background',
-            $artifact,
-            $species->ai_prompt_elements ?? ''
-        );
+        $template = "Portrait of a {gender} {class} alien from a {climate} world, depicted in a {artisticStyle} style. {variation} variation. Physical features: {physicalFeatures}. Hair: {hairStyle} {hairColor} hair. Eyes: {eyeColor} eyes that {eyeExpression}. Facial features include {facialFeatures}. Wearing {clothing} with {accessory}. Visual details: {visualDetails}. The alien {posTraitVisual} and {negTraitVisual}, {pose} in {environment}. Holding a {artifact}. Style elements: {aiPromptElements}.";
 
-        return $description;
+        $replacements = array_merge($attributes, [
+            'class' => $species->class,
+            'climate' => $climate,
+            'variation' => $variation,
+            'physicalFeatures' => implode(', ', $physicalFeatures),
+            'visualDetails' => implode(', ', $visualDetails),
+            'posTraitVisual' => $posTraitVisual,
+            'negTraitVisual' => $negTraitVisual,
+            'artifact' => $artifact,
+            'aiPromptElements' => $species->ai_prompt_elements ?? ''
+        ]);
+
+        return $this->processTemplate($template, $replacements);
     }
 
-    private function generateAlienNegativePrompt(): string
-    {
-        return 'low quality, blurry, inappropriate content, violence, gore, distorted proportions, unrealistic textures, oversaturated colors, poorly drawn features, asymmetrical when should be symmetrical, floating disconnected parts, inconsistent lighting, pixelated, artifacts';
-    }
-
-    private function generateAlienTags(
-        string $class,
-        string $climate,
-        ?AlienTrait $positiveTrait,
-        ?AlienTrait $negativeTrait,
-        string $style,
-        string $environment,
-        string $artifact,
-        string $gender,
-        array $attributes
-    ): array {
-        $tags = [
-            $class,
-            $climate,
-            $style,
-            $environment,
-            $artifact,
-            $gender
-        ];
-
-        if ($positiveTrait) {
-            $tags[] = $positiveTrait->name;
-        }
-
-        if ($negativeTrait) {
-            $tags[] = $negativeTrait->name;
-        }
-
-        $tags[] = $attributes['hairColor'] ?? '';
-        $tags[] = $attributes['eyeColor'] ?? '';
-        $tags[] = $attributes['clothing'] ?? '';
-
-        return array_filter($tags);
-    }
 }

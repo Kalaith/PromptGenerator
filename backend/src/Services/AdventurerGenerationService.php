@@ -6,15 +6,13 @@ namespace AnimePromptGen\Services;
 
 use AnimePromptGen\External\AdventurerClassRepository;
 use AnimePromptGen\External\AttributeRepository;
+use AnimePromptGen\External\GameAssetRepository;
+use AnimePromptGen\External\SpeciesRepository;
+use AnimePromptGen\External\DescriptionTemplateRepository;
 use AnimePromptGen\Models\AdventurerClass;
 
-final class AdventurerGenerationService
+final class AdventurerGenerationService extends BaseGenerationService
 {
-    private const RACES = [
-        'dragonkin', 'dwarf', 'elf', 'goblin', 'halfling', 'human', 'orc', 'tiefling',
-        'half-elf', 'gnome', 'half-orc', 'aasimar', 'genasi', 'tabaxi', 'kenku', 'lizardfolk'
-    ];
-
     private const EXPERIENCE_LEVELS = ['low', 'mid', 'high'];
 
     private const RACE_TRAITS = [
@@ -42,22 +40,39 @@ final class AdventurerGenerationService
 
     public function __construct(
         private readonly AdventurerClassRepository $classRepository,
-        private readonly AttributeRepository $attributeRepository,
-        private readonly RandomGeneratorService $randomGenerator
-    ) {}
+        private readonly SpeciesRepository $speciesRepository,
+        AttributeRepository $attributeRepository,
+        GameAssetRepository $gameAssetRepository,
+        RandomGeneratorService $randomGenerator,
+        DescriptionTemplateRepository $templateRepository
+    ) {
+        parent::__construct($attributeRepository, $gameAssetRepository, $randomGenerator, $templateRepository);
+    }
 
-    public function generateAdventurerPrompt(?string $race = null, ?string $className = null, ?string $experience = null): array
+    public function generatePromptData(
+        ?string $race = null, 
+        ?string $className = null, 
+        ?string $experience = null, 
+        ?string $gender = null, 
+        ?string $style = null, 
+        ?string $environment = null,
+        ?string $hairColor = null,
+        ?string $skinColor = null, 
+        ?string $eyeColor = null,
+        ?string $eyeStyle = null,
+        ?string $templateId = null
+    ): array
     {
         // Select random values if not provided
         $selectedRace = $race === 'random' || $race === null ? 
-            $this->randomGenerator->getRandomElement(self::RACES) : $race;
+            $this->getRandomRace() : $race;
         
         $adventurerClass = $this->getAdventurerClass($className);
         
-        $selectedExperience = $experience ?? $this->randomGenerator->getRandomElement(self::EXPERIENCE_LEVELS);
+        $selectedExperience = $experience ?? $this->getRandomExperienceLevel();
 
-        // Generate attributes
-        $attributes = $this->generateAdventurerAttributes();
+        // Generate attributes with all options
+        $attributes = $this->generateExtendedAttributes($gender, $style, $environment, $hairColor, $skinColor, $eyeColor, $eyeStyle);
 
         // Generate equipment based on class and experience
         $equipment = $this->generateEquipment($adventurerClass, $selectedExperience);
@@ -83,8 +98,8 @@ final class AdventurerGenerationService
             'equipment' => $equipment,
             'raceFeatures' => $raceFeatures,
             'description' => $description,
-            'negative_prompt' => 'malformed anatomy, extra limbs, cartoon faces, low quality, blurry, modern clothing, sci-fi elements, realistic photography, 3D render',
-            'tags' => [$selectedRace, $adventurerClass->name, $selectedExperience, $attributes['hairColor'], $attributes['eyeColor']]
+            'negative_prompt' => $this->generateStandardNegativePrompt(),
+            'tags' => $this->generateBaseTags($attributes, [$selectedRace, $adventurerClass->name, $selectedExperience])
         ];
     }
 
@@ -105,17 +120,41 @@ final class AdventurerGenerationService
         return $randomClass;
     }
 
-    private function generateAdventurerAttributes(): array
+    public function getAvailableRaces(): array
     {
-        return [
-            'hairColor' => $this->randomGenerator->getRandomAttribute('hair_colors'),
-            'hairStyle' => $this->randomGenerator->getRandomAttribute('hair_styles'),
-            'eyeColor' => $this->randomGenerator->getRandomAttribute('eye_colors'),
-            'eyeExpression' => $this->randomGenerator->getRandomAttribute('eye_expressions'),
-            'background' => $this->randomGenerator->getRandomAttribute('backgrounds'),
-            'pose' => $this->randomGenerator->getRandomAttribute('poses'),
-            'facialFeatures' => $this->randomGenerator->getRandomAttributes('facial_features', $this->randomGenerator->generateRandomInt(1, 3))
-        ];
+        // Get traditional fantasy races from database
+        $races = $this->gameAssetRepository->getByType('race');
+        $raceNames = array_map(fn($race) => $race->name, $races);
+        
+        // Add anime species as race options
+        $animeSpecies = $this->speciesRepository->getAllActive();
+        $speciesNames = $animeSpecies->pluck('name')->toArray();
+        
+        return array_merge($raceNames, $speciesNames);
+    }
+
+    public function getAvailableExperienceLevels(): array
+    {
+        $levels = $this->gameAssetRepository->getByType('experience_level');
+        return array_map(fn($level) => $level->name, $levels);
+    }
+
+    public function getAvailableClasses(): array
+    {
+        $classes = $this->classRepository->getAllActive();
+        return $classes->pluck('name')->toArray();
+    }
+
+    private function getRandomRace(): string
+    {
+        $availableRaces = $this->getAvailableRaces();
+        return $this->randomGenerator->getRandomElement($availableRaces) ?? 'human';
+    }
+
+    private function getRandomExperienceLevel(): string
+    {
+        $level = $this->gameAssetRepository->getRandomByType('experience_level');
+        return $level ? $level->name : 'low';
     }
 
     private function generateEquipment(AdventurerClass $class, string $experience): array
@@ -142,7 +181,7 @@ final class AdventurerGenerationService
         }
 
         $selectedFeatures = $this->randomGenerator->getRandomElements($traits['features'], $this->randomGenerator->generateRandomInt(1, 2));
-        return empty($selectedFeatures) ? '' : 'She has distinctive ' . implode(' and ', $selectedFeatures) . '.';
+        return empty($selectedFeatures) ? '' : 'They have distinctive ' . implode(' and ', $selectedFeatures) . '.';
     }
 
     private function generateAdventurerDescription(
@@ -156,32 +195,17 @@ final class AdventurerGenerationService
         $equipmentText = implode(', ', array_filter($equipment));
         $facialFeaturesText = implode(', ', $attributes['facialFeatures'] ?? []);
 
-        $template = "An anime-style portrait of a {experience}-level {race} {class} with {hairColor} {hairStyle} hair and {eyeColor} eyes. {raceFeatures} She wears {equipment} and has {facialFeatures}, {pose} against a {background}.";
+        $template = $this->getTemplate('adventurer', $templateId);
 
-        return str_replace([
-            '{experience}',
-            '{race}',
-            '{class}',
-            '{hairColor}',
-            '{hairStyle}',
-            '{eyeColor}',
-            '{raceFeatures}',
-            '{equipment}',
-            '{facialFeatures}',
-            '{pose}',
-            '{background}'
-        ], [
-            $experience,
-            $race,
-            $class->name,
-            $attributes['hairColor'] ?? '',
-            $attributes['hairStyle'] ?? '',
-            $attributes['eyeColor'] ?? '',
-            $raceFeatures,
-            $equipmentText,
-            $facialFeaturesText,
-            $attributes['pose'] ?? '',
-            $attributes['background'] ?? ''
-        ], $template);
+        $replacements = array_merge($attributes, [
+            'experience' => $experience,
+            'race' => $race,
+            'class' => $class->name,
+            'raceFeatures' => $raceFeatures,
+            'equipment' => $equipmentText,
+            'facialFeatures' => $facialFeaturesText,
+        ]);
+
+        return $this->processTemplate($template, $replacements);
     }
 }

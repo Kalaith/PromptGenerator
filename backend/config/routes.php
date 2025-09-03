@@ -9,6 +9,7 @@ use AnimePromptGen\Controllers\AlienController;
 use AnimePromptGen\Controllers\UserSessionController;
 use AnimePromptGen\Controllers\SpeciesController;
 use AnimePromptGen\Controllers\TemplateController;
+use AnimePromptGen\Controllers\DescriptionTemplateController;
 
 return function (App $app) {
     // API base path
@@ -49,6 +50,15 @@ return function (App $app) {
         $group->post('/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
         $group->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
         
+        // Description template routes (specific routes must come before parameterized routes)
+        $group->get('/description-templates', [DescriptionTemplateController::class, 'getAll']);
+        $group->get('/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
+        $group->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'generateBulk']);
+        $group->post('/description-templates', [DescriptionTemplateController::class, 'create']);
+        $group->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getById']);
+        $group->put('/description-templates/{id}', [DescriptionTemplateController::class, 'update']);
+        $group->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'delete']);
+        
         // Health check
         $group->get('/health', function ($request, $response) {
             $response->getBody()->write(json_encode([
@@ -71,6 +81,15 @@ return function (App $app) {
     $app->delete('/templates/{id}', [TemplateController::class, 'delete']);
     $app->post('/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
     $app->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
+    
+    // Description template routes (direct access - specific routes must come before parameterized routes)
+    $app->get('/description-templates', [DescriptionTemplateController::class, 'getAll']);
+    $app->get('/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
+    $app->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'generateBulk']);
+    $app->post('/description-templates', [DescriptionTemplateController::class, 'create']);
+    $app->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getById']);
+    $app->put('/description-templates/{id}', [DescriptionTemplateController::class, 'update']);
+    $app->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'delete']);
     
     $app->get('/species', [SpeciesController::class, 'getAll']);
     $app->get('/species/types', [SpeciesController::class, 'getTypes']);

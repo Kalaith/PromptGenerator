@@ -6,17 +6,21 @@ namespace AnimePromptGen\Services;
 
 use AnimePromptGen\External\SpeciesRepository;
 use AnimePromptGen\External\AttributeRepository;
+use AnimePromptGen\External\GameAssetRepository;
 use AnimePromptGen\Models\Species;
 
-final class PromptGenerationService
+final class PromptGenerationService extends BaseGenerationService
 {
     public function __construct(
         private readonly SpeciesRepository $speciesRepository,
-        private readonly AttributeRepository $attributeRepository,
-        private readonly RandomGeneratorService $randomGenerator
-    ) {}
+        AttributeRepository $attributeRepository,
+        GameAssetRepository $gameAssetRepository,
+        RandomGeneratorService $randomGenerator
+    ) {
+        parent::__construct($attributeRepository, $gameAssetRepository, $randomGenerator);
+    }
 
-    public function generatePromptData(string $type, ?string $speciesName = null): array
+    public function generatePromptData(string $type, ?string $speciesName = null, ?string $gender = null, ?string $style = null, ?string $environment = null): array
     {
         // Handle random type selection
         $actualType = $type;
@@ -31,8 +35,8 @@ final class PromptGenerationService
             throw new \InvalidArgumentException("No species found for type: {$actualType}");
         }
 
-        // Generate attributes
-        $attributes = $this->generateAttributes();
+        // Generate attributes with extended options
+        $attributes = $this->generateExtendedAttributes($gender, $style, $environment);
 
         // Generate description
         $description = $this->generateDescription($species, $attributes);
@@ -41,15 +45,11 @@ final class PromptGenerationService
             'species' => $species,
             'attributes' => $attributes,
             'description' => $description,
-            'negative_prompt' => $species->negative_prompt,
-            'tags' => array_merge(
+            'negative_prompt' => $species->negative_prompt ?: $this->generateStandardNegativePrompt(),
+            'tags' => $this->generateBaseTags($attributes, array_merge(
                 [$species->name],
-                $species->personality ?? [],
-                array_values(array_filter([
-                    $attributes['hairColor'] ?? null,
-                    $attributes['eyeColor'] ?? null
-                ]))
-            )
+                $species->personality ?? []
+            ))
         ];
     }
 
@@ -68,22 +68,6 @@ final class PromptGenerationService
         return $this->speciesRepository->getRandomByType($type);
     }
 
-    private function generateAttributes(): array
-    {
-        return [
-            'hairColor' => $this->randomGenerator->getRandomAttribute('hair_colors'),
-            'hairStyle' => $this->randomGenerator->getRandomAttribute('hair_styles'),
-            'eyeColor' => $this->randomGenerator->getRandomAttribute('eye_colors'),
-            'eyeExpression' => $this->randomGenerator->getRandomAttribute('eye_expressions'),
-            'background' => $this->randomGenerator->getRandomAttribute('backgrounds'),
-            'pose' => $this->randomGenerator->getRandomAttribute('poses'),
-            'clothing' => $this->randomGenerator->getRandomAttribute('clothing_items'),
-            'accessory' => $this->randomGenerator->shouldRandomlyOccur(0.5) 
-                ? $this->randomGenerator->getRandomAttribute('accessories') 
-                : '',
-            'facialFeatures' => $this->randomGenerator->getRandomAttributes('facial_features', $this->randomGenerator->generateRandomInt(1, 3))
-        ];
-    }
 
     private function generateDescription(Species $species, array $attributes): string
     {
@@ -101,41 +85,17 @@ final class PromptGenerationService
             $this->randomGenerator->getRandomElements($species->personality, $this->randomGenerator->generateRandomInt(1, 2)) : 
             [];
 
-        // Replace template variables
-        $description = str_replace([
-            '{personality}',
-            '{species}',
-            '{features}',
-            '{ears}',
-            '{tail}',
-            '{wings}',
-            '{hairColor}',
-            '{hairStyle}',
-            '{eyeColor}',
-            '{eyeExpression}',
-            '{background}',
-            '{clothing}',
-            '{pose}',
-            '{accessories}',
-            '{facialFeatures}'
-        ], [
-            implode(' and ', $personality),
-            $species->species_name ?? $species->name,
-            implode(', ', $features),
-            $species->ears ?? '',
-            $species->tail ?? '',
-            $species->wings ?? '',
-            $attributes['hairColor'] ?? '',
-            $attributes['hairStyle'] ?? '',
-            $attributes['eyeColor'] ?? '',
-            $attributes['eyeExpression'] ?? '',
-            $attributes['background'] ?? '',
-            $attributes['clothing'] ?? '',
-            $attributes['pose'] ?? '',
-            $attributes['accessory'] ? ' while wearing ' . $attributes['accessory'] : '',
-            implode(', ', $attributes['facialFeatures'] ?? [])
-        ], $template);
+        // Prepare template replacements
+        $replacements = array_merge($attributes, [
+            'personality' => implode(' and ', $personality),
+            'species' => $species->species_name ?? $species->name,
+            'features' => implode(', ', $features),
+            'ears' => $species->ears ?? '',
+            'tail' => $species->tail ?? '',
+            'wings' => $species->wings ?? '',
+            'accessories' => $attributes['accessory'] ? ' while wearing ' . $attributes['accessory'] : '',
+        ]);
 
-        return $description;
+        return $this->processTemplate($template, $replacements);
     }
 }

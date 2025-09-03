@@ -63,6 +63,16 @@ export class PromptApi {
     );
   }
 
+  // Get available adventurer races
+  static async getAdventurerRaces(): Promise<{ races: string[] }> {
+    return apiClient.get<{ races: string[] }>('/adventurers/races');
+  }
+
+  // Get available adventurer classes
+  static async getAdventurerClasses(): Promise<{ classes: string[] }> {
+    return apiClient.get<{ classes: string[] }>('/adventurers/classes');
+  }
+
   // Get available species
   static async getSpecies(): Promise<SpeciesResponse> {
     return apiClient.get<SpeciesResponse>('/species');

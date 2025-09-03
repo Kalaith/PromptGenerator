@@ -66,6 +66,23 @@ return new class {
             ['category' => 'eye_colors', 'value' => 'copper', 'weight' => 3],
             ['category' => 'eye_colors', 'value' => 'sapphire', 'weight' => 3],
 
+            // Skin Colors
+            ['category' => 'skin_colors', 'value' => 'fair', 'weight' => 8],
+            ['category' => 'skin_colors', 'value' => 'pale', 'weight' => 6],
+            ['category' => 'skin_colors', 'value' => 'light', 'weight' => 8],
+            ['category' => 'skin_colors', 'value' => 'medium', 'weight' => 9],
+            ['category' => 'skin_colors', 'value' => 'olive', 'weight' => 7],
+            ['category' => 'skin_colors', 'value' => 'tan', 'weight' => 7],
+            ['category' => 'skin_colors', 'value' => 'dark', 'weight' => 8],
+            ['category' => 'skin_colors', 'value' => 'bronze', 'weight' => 5],
+            ['category' => 'skin_colors', 'value' => 'golden', 'weight' => 4],
+            ['category' => 'skin_colors', 'value' => 'porcelain', 'weight' => 3],
+            ['category' => 'skin_colors', 'value' => 'peachy', 'weight' => 4],
+            ['category' => 'skin_colors', 'value' => 'rosy', 'weight' => 3],
+            ['category' => 'skin_colors', 'value' => 'ebony', 'weight' => 5],
+            ['category' => 'skin_colors', 'value' => 'honey', 'weight' => 4],
+            ['category' => 'skin_colors', 'value' => 'caramel', 'weight' => 5],
+
             // Clothing Items
             ['category' => 'clothing_items', 'value' => 'plain shirt', 'weight' => 8],
             ['category' => 'clothing_items', 'value' => 'simple dress', 'weight' => 7],

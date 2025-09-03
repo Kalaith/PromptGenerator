@@ -18,6 +18,7 @@ interface UsePromptGenerationResult extends UsePromptGenerationState {
   generateAlienPrompts: (request: GenerateAlienRequest) => Promise<ApiPrompt[]>;
   generateAdventurerPrompts: (request: GenerateAdventurerRequest) => Promise<ApiPrompt[]>;
   clearError: () => void;
+  setError: (error: AppError | null) => void;
 }
 
 export const usePromptGeneration = (): UsePromptGenerationResult => {
@@ -136,5 +137,6 @@ export const usePromptGeneration = (): UsePromptGenerationResult => {
     generateAlienPrompts,
     generateAdventurerPrompts,
     clearError,
+    setError,
   };
 };
