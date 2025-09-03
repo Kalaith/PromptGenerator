@@ -40,7 +40,7 @@ final class GeneratePromptsAction
                 $prompt->tags = $promptData['tags'];
                 $prompt->species_id = $promptData['species']->id;
                 $prompt->prompt_type = $type;
-                $prompt->generated_at = now();
+                $prompt->generated_at = date('Y-m-d H:i:s');
 
                 $savedPrompt = $this->promptRepository->create($prompt);
                 

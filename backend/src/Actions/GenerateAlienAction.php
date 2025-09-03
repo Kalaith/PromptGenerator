@@ -50,7 +50,7 @@ final class GenerateAlienAction
                     'description' => $promptData['description'],
                     'negative_prompt' => $promptData['negative_prompt'],
                     'tags' => $promptData['tags'],
-                    'type' => 'alien'
+                    'prompt_type' => 'alien'
                 ]);
 
                 $image_prompts[] = $prompt->toArray();
