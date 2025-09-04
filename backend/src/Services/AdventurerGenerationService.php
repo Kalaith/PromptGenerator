@@ -6,7 +6,6 @@ namespace AnimePromptGen\Services;
 
 use AnimePromptGen\External\AdventurerClassRepository;
 use AnimePromptGen\External\AttributeRepository;
-use AnimePromptGen\External\GameAssetRepository;
 use AnimePromptGen\External\UnifiedSpeciesRepository;
 use AnimePromptGen\External\DescriptionTemplateRepository;
 use AnimePromptGen\Models\AdventurerClass;
@@ -42,11 +41,10 @@ final class AdventurerGenerationService extends BaseGenerationService
         private readonly AdventurerClassRepository $classRepository,
         private readonly UnifiedSpeciesRepository $speciesRepository,
         AttributeRepository $attributeRepository,
-        GameAssetRepository $gameAssetRepository,
         RandomGeneratorService $randomGenerator,
         DescriptionTemplateRepository $templateRepository
     ) {
-        parent::__construct($attributeRepository, $gameAssetRepository, $randomGenerator, $templateRepository);
+        parent::__construct($attributeRepository, $randomGenerator, $templateRepository);
     }
 
     public function generatePromptData(...$args): array
@@ -123,21 +121,23 @@ final class AdventurerGenerationService extends BaseGenerationService
 
     public function getAvailableRaces(): array
     {
-        // Get traditional fantasy races from database
-        $races = $this->gameAssetRepository->getByType('race');
-        $raceNames = array_map(fn($race) => $race->name, $races);
+        // Get races from unified species (type 'race' and 'fantasy')
+        $races = $this->speciesRepository->findByType('race');
+        $fantasyRaces = $this->speciesRepository->findByType('fantasy');
         
-        // Add anime species as race options
-        $animeSpecies = $this->speciesRepository->getAllActive();
-        $speciesNames = $animeSpecies->pluck('name')->toArray();
+        $allRaces = $races->merge($fantasyRaces);
+        $raceNames = $allRaces->pluck('name')->toArray();
         
-        return array_merge($raceNames, $speciesNames);
+        // Add predefined fantasy races if not in database
+        $predefinedRaces = ['human', 'elf', 'dwarf', 'halfling', 'dragonborn', 'tiefling', 'gnome', 'half-elf', 'orc'];
+        
+        return array_unique(array_merge($raceNames, $predefinedRaces));
     }
 
     public function getAvailableExperienceLevels(): array
     {
-        $levels = $this->gameAssetRepository->getByType('experience_level');
-        return array_map(fn($level) => $level->name, $levels);
+        $levels = $this->attributeRepository->getAttributeValues('experience_levels');
+        return !empty($levels) ? $levels : ['novice', 'experienced', 'veteran', 'legendary'];
     }
 
     public function getAvailableClasses(): array
@@ -148,20 +148,20 @@ final class AdventurerGenerationService extends BaseGenerationService
 
     public function getAvailableGenders(): array
     {
-        $genders = $this->gameAssetRepository->getByType('gender');
-        return array_map(fn($gender) => $gender->name, $genders);
+        $genders = $this->attributeRepository->getAttributeValues('gender');
+        return !empty($genders) ? $genders : ['female', 'male', 'non-binary'];
     }
 
     public function getAvailableArtisticStyles(): array
     {
-        $styles = $this->gameAssetRepository->getByType('artistic_style');
-        return array_map(fn($style) => $style->name, $styles);
+        $styles = $this->attributeRepository->getAttributeValues('artistic_style');
+        return !empty($styles) ? $styles : ['anime', 'realistic', 'fantasy', 'manga'];
     }
 
     public function getAvailableEnvironments(): array
     {
-        $environments = $this->gameAssetRepository->getByType('environment');
-        return array_map(fn($environment) => $environment->name, $environments);
+        $environments = $this->attributeRepository->getAttributeValues('environment');
+        return !empty($environments) ? $environments : ['tavern', 'forest', 'castle', 'dungeon', 'city'];
     }
 
     public function getAvailableHairColors(): array
@@ -192,8 +192,8 @@ final class AdventurerGenerationService extends BaseGenerationService
 
     private function getRandomExperienceLevel(): string
     {
-        $level = $this->gameAssetRepository->getRandomByType('experience_level');
-        return $level ? $level->name : 'low';
+        $levels = $this->getAvailableExperienceLevels();
+        return $this->randomGenerator->getRandomElement($levels);
     }
 
     private function generateEquipment(AdventurerClass $class, string $experience): array
@@ -234,7 +234,7 @@ final class AdventurerGenerationService extends BaseGenerationService
         $equipmentText = implode(', ', array_filter($equipment));
         $facialFeaturesText = implode(', ', $attributes['facialFeatures'] ?? []);
 
-        $template = $this->getTemplate('adventurer', $templateId);
+        $template = $this->getTemplate('adventurer', null);
 
         $replacements = array_merge($attributes, [
             'experience' => $experience,

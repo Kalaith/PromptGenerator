@@ -11,6 +11,9 @@ use AnimePromptGen\Controllers\SpeciesController;
 use AnimePromptGen\Controllers\TemplateController;
 use AnimePromptGen\Controllers\DescriptionTemplateController;
 use AnimePromptGen\Controllers\GameAssetsController;
+use AnimePromptGen\Controllers\AnimeAttributesController;
+use AnimePromptGen\Controllers\GeneratorAttributesController;
+use AnimePromptGen\Controllers\AttributeConfigController;
 
 return function (App $app) {
     // API base path
@@ -43,6 +46,19 @@ return function (App $app) {
         // Species routes
         $group->get('/species', [SpeciesController::class, 'getAll']);
         $group->get('/species/types', [SpeciesController::class, 'getTypes']);
+        
+        // Generic attributes route (replaces specific routes)
+        $group->get('/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
+        $group->get('/generator-attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
+        
+        // Legacy anime attributes route (for backward compatibility)
+        $group->get('/anime/attributes', [AnimeAttributesController::class, 'getAttributes']);
+        
+        // Attribute configuration management
+        $group->get('/attribute-config', [AttributeConfigController::class, 'getConfigs']);
+        $group->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
+        $group->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
+        $group->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
         
         // Template routes (specific routes must come before parameterized routes)
         $group->get('/templates', [TemplateController::class, 'getAll']);
@@ -111,6 +127,9 @@ return function (App $app) {
     
     $app->get('/species', [SpeciesController::class, 'getAll']);
     $app->get('/species/types', [SpeciesController::class, 'getTypes']);
+    
+    $app->get('/generator-attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
+    $app->get('/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
     
     $app->post('/prompts/generate', [PromptController::class, 'generate']);
     $app->post('/adventurers/generate', [AdventurerController::class, 'generate']);

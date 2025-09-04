@@ -21,7 +21,8 @@ final class GenerateAlienAction
         ?string $negativeTrait = null,
         ?string $style = null,
         ?string $environment = null,
-        ?string $gender = null
+        ?string $gender = null,
+        ?string $templateId = null
     ): array {
         $safeCount = max(1, min($count, 10)); // Limit to reasonable range
         $image_prompts = [];
@@ -36,7 +37,8 @@ final class GenerateAlienAction
                     $negativeTrait,
                     $style,
                     $environment,
-                    $gender
+                    $gender,
+                    $templateId
                 );
 
                 // Create and save prompt

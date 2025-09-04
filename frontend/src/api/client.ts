@@ -27,6 +27,8 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.config.baseUrl}${endpoint}`;
     
+    // console.log(`API Request: ${options.method || 'GET'} ${url}`);
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
@@ -52,7 +54,22 @@ class ApiClient {
         );
       }
 
-      return await response.json();
+      // Handle empty responses
+      const text = await response.text();
+      if (!text) {
+        return {} as T;
+      }
+      
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', text);
+        throw AppErrorHandler.createError(
+          ErrorType.UNKNOWN,
+          `Invalid JSON response: ${text}`,
+          'PARSE_ERROR'
+        );
+      }
     } catch (error) {
       clearTimeout(timeoutId);
       

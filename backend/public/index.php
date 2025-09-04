@@ -53,7 +53,7 @@ $app->add(function ($request, $handler) {
 
 // Handle preflight requests
 $app->options('/{routes:.+}', function ($request, $response, $args) {
-    return $response;
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
 // Load routes

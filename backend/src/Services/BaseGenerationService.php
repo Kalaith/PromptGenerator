@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnimePromptGen\Services;
 
 use AnimePromptGen\External\AttributeRepository;
-use AnimePromptGen\External\GameAssetRepository;
 use AnimePromptGen\External\DescriptionTemplateRepository;
 
 /**
@@ -15,7 +14,6 @@ abstract class BaseGenerationService
 {
     public function __construct(
         protected readonly AttributeRepository $attributeRepository,
-        protected readonly GameAssetRepository $gameAssetRepository,
         protected readonly RandomGeneratorService $randomGenerator,
         protected readonly DescriptionTemplateRepository $templateRepository
     ) {}
@@ -61,8 +59,8 @@ abstract class BaseGenerationService
      */
     protected function getRandomGender(): string
     {
-        $gender = $this->gameAssetRepository->getRandomByType('gender');
-        return $gender ? $gender->name : 'female'; // default fallback
+        $genders = $this->attributeRepository->getRandomByCategory('gender', 1);
+        return $genders->isNotEmpty() ? $genders->first()->name : 'female'; // default fallback
     }
 
     /**
@@ -70,8 +68,8 @@ abstract class BaseGenerationService
      */
     protected function getRandomArtisticStyle(): string
     {
-        $style = $this->gameAssetRepository->getRandomByType('artistic_style');
-        return $style ? $style->name : 'anime'; // default fallback
+        $styles = $this->attributeRepository->getRandomByCategory('artistic_style', 1);
+        return $styles->isNotEmpty() ? $styles->first()->name : 'anime'; // default fallback
     }
 
     /**
@@ -79,8 +77,8 @@ abstract class BaseGenerationService
      */
     protected function getRandomEnvironment(): string
     {
-        $environment = $this->gameAssetRepository->getRandomByType('environment');
-        return $environment ? $environment->name : 'fantasy background'; // default fallback
+        $environments = $this->attributeRepository->getRandomByCategory('environment', 1);
+        return $environments->isNotEmpty() ? $environments->first()->name : 'fantasy background'; // default fallback
     }
 
     /**
@@ -98,8 +96,8 @@ abstract class BaseGenerationService
      */
     protected function getRandomCulturalArtifact(): string
     {
-        $artifact = $this->gameAssetRepository->getRandomByType('cultural_artifact');
-        return $artifact ? $artifact->name : 'simple item'; // default fallback
+        $artifacts = $this->attributeRepository->getRandomByCategory('cultural_artifact', 1);
+        return $artifacts->isNotEmpty() ? $artifacts->first()->name : 'simple item'; // default fallback
     }
 
     /**
@@ -206,19 +204,19 @@ abstract class BaseGenerationService
      */
     public function getAvailableGenders(): array
     {
-        $genders = $this->gameAssetRepository->getByType('gender');
+        $genders = $this->attributeRepository->findByCategory('gender');
         return array_map(fn($gender) => $gender->name, $genders);
     }
 
     public function getAvailableArtisticStyles(): array
     {
-        $styles = $this->gameAssetRepository->getByType('artistic_style');
+        $styles = $this->attributeRepository->findByCategory('artistic_style');
         return array_map(fn($style) => $style->name, $styles);
     }
 
     public function getAvailableEnvironments(): array
     {
-        $environments = $this->gameAssetRepository->getByType('environment');
+        $environments = $this->attributeRepository->findByCategory('environment');
         return array_map(fn($environment) => $environment->name, $environments);
     }
 

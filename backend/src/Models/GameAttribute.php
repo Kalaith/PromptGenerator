@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 
 final class GameAttribute extends Model
 {
-    protected $table = 'game_attributes';
+    protected $table = 'attributes';
     
     protected $fillable = [
         'category',

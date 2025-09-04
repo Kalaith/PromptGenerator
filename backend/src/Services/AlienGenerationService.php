@@ -7,7 +7,7 @@ namespace AnimePromptGen\Services;
 use AnimePromptGen\External\AlienSpeciesRepository;
 use AnimePromptGen\External\AlienTraitRepository;
 use AnimePromptGen\External\AttributeRepository;
-use AnimePromptGen\External\GameAssetRepository;
+use AnimePromptGen\External\DescriptionTemplateRepository;
 use AnimePromptGen\Models\AlienSpecies;
 use AnimePromptGen\Models\AlienTrait;
 
@@ -17,21 +17,21 @@ final class AlienGenerationService extends BaseGenerationService
         private readonly AlienSpeciesRepository $alienSpeciesRepository,
         private readonly AlienTraitRepository $alienTraitRepository,
         AttributeRepository $attributeRepository,
-        GameAssetRepository $gameAssetRepository,
-        RandomGeneratorService $randomGenerator
+        RandomGeneratorService $randomGenerator,
+        DescriptionTemplateRepository $templateRepository
     ) {
-        parent::__construct($attributeRepository, $gameAssetRepository, $randomGenerator);
+        parent::__construct($attributeRepository, $randomGenerator, $templateRepository);
     }
 
-    public function generatePromptData(
-        ?string $speciesClass = null,
-        ?string $climate = null,
-        ?string $positiveTrait = null,
-        ?string $negativeTrait = null,
-        ?string $style = null,
-        ?string $environment = null,
-        ?string $gender = null
-    ): array {
+    public function generatePromptData(...$args): array {
+        // Extract named parameters from args
+        $speciesClass = $args[0] ?? null;
+        $climate = $args[1] ?? null;
+        $positiveTrait = $args[2] ?? null;
+        $negativeTrait = $args[3] ?? null;
+        $style = $args[4] ?? null;
+        $environment = $args[5] ?? null;
+        $gender = $args[6] ?? null;
         // Handle random species class
         $actualClass = $speciesClass;
         if ($speciesClass === 'random' || $speciesClass === null) {
@@ -127,32 +127,35 @@ final class AlienGenerationService extends BaseGenerationService
 
     private function generateRandomClimate(): string
     {
-        $climate = $this->gameAssetRepository->getRandomByType('climate');
-        return $climate ? $climate->name : 'Continental';
+        $climates = $this->attributeRepository->getRandomByCategory('climate', 1);
+        return $climates->isNotEmpty() ? $climates->first()->name : 'Continental';
+    }
+
+    public function generateAlienPromptData(
+        ?string $speciesClass = null,
+        ?string $climate = null,
+        ?string $positiveTrait = null,
+        ?string $negativeTrait = null,
+        ?string $style = null,
+        ?string $environment = null,
+        ?string $gender = null,
+        ?string $templateId = null
+    ): array {
+        return $this->generatePromptData(
+            $speciesClass,
+            $climate,
+            $positiveTrait,
+            $negativeTrait,
+            $style,
+            $environment,
+            $gender
+        );
     }
 
     public function getAvailableClimates(): array
     {
-        $climates = $this->gameAssetRepository->getByType('climate');
+        $climates = $this->attributeRepository->findByCategory('climate');
         return array_map(fn($climate) => $climate->name, $climates);
-    }
-
-    public function getAvailableGenders(): array
-    {
-        $genders = $this->gameAssetRepository->getByType('gender');
-        return array_map(fn($gender) => $gender->name, $genders);
-    }
-
-    public function getAvailableArtisticStyles(): array
-    {
-        $styles = $this->gameAssetRepository->getByType('artistic_style');
-        return array_map(fn($style) => $style->name, $styles);
-    }
-
-    public function getAvailableEnvironments(): array
-    {
-        $environments = $this->gameAssetRepository->getByType('environment');
-        return array_map(fn($environment) => $environment->name, $environments);
     }
 
     private function adaptAttributesToSpecies(array $attributes, string $speciesClass): array

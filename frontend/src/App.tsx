@@ -7,6 +7,7 @@ import AdventurerGeneratorPage from './pages/AdventurerGeneratorPage';
 import AlienGeneratorPage from './pages/AlienGeneratorPage';
 import TemplatesPage from './pages/TemplatesPage';
 import DescriptionTemplatesPage from './pages/DescriptionTemplatesPage';
+import AttributeManagerPage from './pages/AttributeManagerPage';
 
 const App: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ const App: React.FC = () => {
             <Route path="/alien" element={<AlienGeneratorPage />} />
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/description-templates" element={<DescriptionTemplatesPage />} />
+            <Route path="/attribute-manager" element={<AttributeManagerPage />} />
             <Route path="*" element={<Navigate to="/anime" replace />} />
           </Routes>
         </main>

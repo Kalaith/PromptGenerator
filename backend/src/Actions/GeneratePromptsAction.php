@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace AnimePromptGen\Actions;
 
-use AnimePromptGen\External\PromptRepository;
-use AnimePromptGen\Models\Prompt;
 use AnimePromptGen\Services\PromptGenerationService;
 
 final class GeneratePromptsAction
 {
     public function __construct(
-        private readonly PromptRepository $promptRepository,
         private readonly PromptGenerationService $promptGenerationService
     ) {}
 
@@ -33,23 +30,13 @@ final class GeneratePromptsAction
             try {
                 $promptData = $this->promptGenerationService->generatePromptData($type, $species);
                 
-                $prompt = new Prompt();
-                $prompt->title = "{$promptData['species']->name} Character " . ($i + 1);
-                $prompt->description = $promptData['description'];
-                $prompt->negative_prompt = $promptData['negative_prompt'];
-                $prompt->tags = $promptData['tags'];
-                $prompt->species_id = $promptData['species']->id;
-                $prompt->prompt_type = $type;
-                $prompt->generated_at = date('Y-m-d H:i:s');
-
-                $savedPrompt = $this->promptRepository->create($prompt);
-                
+                // Return generated data directly without saving to database
                 $prompts[] = [
-                    'id' => $savedPrompt->id,
-                    'title' => $savedPrompt->title,
-                    'description' => $savedPrompt->description,
-                    'negative_prompt' => $savedPrompt->negative_prompt,
-                    'tags' => $savedPrompt->tags
+                    'id' => $i + 1, // Use index as temporary ID
+                    'title' => "{$promptData['species']->name} Character " . ($i + 1),
+                    'description' => $promptData['description'],
+                    'negative_prompt' => $promptData['negative_prompt'],
+                    'tags' => $promptData['tags']
                 ];
 
             } catch (\Exception $e) {

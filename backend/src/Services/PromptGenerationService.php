@@ -6,7 +6,7 @@ namespace AnimePromptGen\Services;
 
 use AnimePromptGen\External\UnifiedSpeciesRepository;
 use AnimePromptGen\External\AttributeRepository;
-use AnimePromptGen\External\GameAssetRepository;
+use AnimePromptGen\External\DescriptionTemplateRepository;
 use AnimePromptGen\Models\UnifiedSpecies;
 
 final class PromptGenerationService extends BaseGenerationService
@@ -14,14 +14,21 @@ final class PromptGenerationService extends BaseGenerationService
     public function __construct(
         private readonly UnifiedSpeciesRepository $speciesRepository,
         AttributeRepository $attributeRepository,
-        GameAssetRepository $gameAssetRepository,
-        RandomGeneratorService $randomGenerator
+        RandomGeneratorService $randomGenerator,
+        DescriptionTemplateRepository $templateRepository
     ) {
-        parent::__construct($attributeRepository, $gameAssetRepository, $randomGenerator);
+        parent::__construct($attributeRepository, $randomGenerator, $templateRepository);
     }
 
-    public function generatePromptData(string $type, ?string $speciesName = null, ?string $gender = null, ?string $style = null, ?string $environment = null): array
+    public function generatePromptData(...$args): array
     {
+        // Extract arguments
+        $type = $args[0] ?? 'random';
+        $speciesName = $args[1] ?? null;
+        $gender = $args[2] ?? null;
+        $style = $args[3] ?? null;
+        $environment = $args[4] ?? null;
+        
         // Handle random type selection
         $actualType = $type;
         if ($type === 'random') {
@@ -53,14 +60,14 @@ final class PromptGenerationService extends BaseGenerationService
         ];
     }
 
-    private function getSpeciesForGeneration(string $type, ?string $speciesName): ?Species
+    private function getSpeciesForGeneration(string $type, ?string $speciesName): ?UnifiedSpecies
     {
         if ($speciesName === 'random' || $speciesName === null) {
             return $this->speciesRepository->getRandomByType($type);
         }
 
-        $species = $this->speciesRepository->findByName($speciesName);
-        if ($species && $species->type === $type) {
+        $species = $this->speciesRepository->findByNameAndType($speciesName, $type);
+        if ($species) {
             return $species;
         }
 
@@ -69,33 +76,58 @@ final class PromptGenerationService extends BaseGenerationService
     }
 
 
-    private function generateDescription(Species $species, array $attributes): string
+    private function generateDescription(UnifiedSpecies $species, array $attributes): string
     {
-        $template = $species->description_template;
-        if (!$template) {
-            return "A {species} character with {features}.";
+        // Get dynamic features - handle nested arrays from CSV import
+        $features = [];
+        if ($species->features) {
+            $flatFeatures = [];
+            foreach ($species->features as $featureGroup) {
+                if (is_array($featureGroup)) {
+                    $flatFeatures = array_merge($flatFeatures, $featureGroup);
+                } else {
+                    $flatFeatures[] = $featureGroup;
+                }
+            }
+            $features = $flatFeatures ? $this->randomGenerator->getRandomElements($flatFeatures, $this->randomGenerator->generateRandomInt(1, min(3, count($flatFeatures)))) : [];
+        }
+        
+        $personality = [];
+        if ($species->personality) {
+            $flatPersonality = [];
+            foreach ($species->personality as $personalityGroup) {
+                if (is_array($personalityGroup)) {
+                    $flatPersonality = array_merge($flatPersonality, $personalityGroup);
+                } else {
+                    $flatPersonality[] = $personalityGroup;
+                }
+            }
+            $personality = $flatPersonality ? $this->randomGenerator->getRandomElements($flatPersonality, $this->randomGenerator->generateRandomInt(1, min(2, count($flatPersonality)))) : [];
         }
 
-        // Get dynamic features
-        $features = $species->features ? 
-            $this->randomGenerator->getRandomElements($species->features, $this->randomGenerator->generateRandomInt(1, count($species->features))) : 
-            [];
+        // Build a simple description
+        $description = "A {$species->name} character";
         
-        $personality = $species->personality ? 
-            $this->randomGenerator->getRandomElements($species->personality, $this->randomGenerator->generateRandomInt(1, 2)) : 
-            [];
+        if ($features) {
+            $description .= " with " . implode(', ', $features);
+        }
+        
+        if ($personality) {
+            $description .= " who is " . implode(' and ', $personality);
+        }
+        
+        if ($species->ears) {
+            $description .= " with " . $species->ears;
+        }
+        
+        if ($species->tail) {
+            $description .= " and " . $species->tail;
+        }
+        
+        if ($species->wings) {
+            $description .= " and " . $species->wings;
+        }
 
-        // Prepare template replacements
-        $replacements = array_merge($attributes, [
-            'personality' => implode(' and ', $personality),
-            'species' => $species->species_name ?? $species->name,
-            'features' => implode(', ', $features),
-            'ears' => $species->ears ?? '',
-            'tail' => $species->tail ?? '',
-            'wings' => $species->wings ?? '',
-            'accessories' => $attributes['accessory'] ? ' while wearing ' . $attributes['accessory'] : '',
-        ]);
-
-        return $this->processTemplate($template, $replacements);
+        return $description . ".";
     }
 }

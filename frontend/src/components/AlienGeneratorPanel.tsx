@@ -1,29 +1,53 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
-import { useAlienData } from '../hooks/useAlienData';
-import { useAlienForm } from '../hooks/useAlienForm';
-import type { Template } from '../api';
+import { PromptApi } from '../api';
+import type { AttributeConfig, Template } from '../api/types';
+import { APP_CONSTANTS } from '../constants/app';
+import { ValidationUtils } from '../utils/validation';
 
 const AlienGeneratorPanel: React.FC = () => {
-  const [promptCount, setPromptCount] = useState<number>(10);
+  const [promptCount, setPromptCount] = useState<number>(APP_CONSTANTS.PROMPT_COUNT.DEFAULT);
+  const [alienAttributes, setAlienAttributes] = useState<Record<string, AttributeConfig>>({});
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string | string[]>>({});
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   
   const addGeneratedPrompts = usePromptStore(state => state.addGeneratedPrompts);
   const { generateAlienPrompts, loading, error, clearError } = usePromptGeneration();
   const { addToHistory } = useSession();
-  const { availableSpeciesClasses, availableTemplates, loading: dataLoading, error: dataError } = useAlienData();
-  const { formData, updateField, resetForm, buildGenerationRequest } = useAlienForm();
+
+  useEffect(() => {
+    const loadAlienAttributes = async (): Promise<void> => {
+      try {
+        const attributesResponse = await PromptApi.getGeneratorAttributes('alien');
+        setAlienAttributes(attributesResponse.data.attributes);
+      } catch (loadError) {
+        console.error('Failed to load alien attributes:', loadError);
+      }
+    };
+
+    void loadAlienAttributes();
+  }, []);
 
   const handleGenerate = async (): Promise<void> => {
     clearError();
     
-    const safeCount = Math.max(1, Math.floor(Number(promptCount) || 1));
-    const generationRequest = buildGenerationRequest(safeCount, selectedTemplate?.id?.toString());
+    const validation = ValidationUtils.validatePromptCount(promptCount);
+    if (!validation.isValid) {
+      return;
+    }
+    
+    const safeCount = ValidationUtils.sanitizePromptCount(promptCount);
+    const generationParams = {
+      count: safeCount,
+      attributes: Object.keys(selectedAttributes).length > 0 ? selectedAttributes : undefined,
+      templateId: selectedTemplate?.id,
+    };
 
     try {
-      const apiPrompts = await generateAlienPrompts(generationRequest);
+      const apiPrompts = await generateAlienPrompts(generationParams);
       
       if (apiPrompts.length > 0) {
         addGeneratedPrompts(apiPrompts);
@@ -49,49 +73,66 @@ const AlienGeneratorPanel: React.FC = () => {
     }
   };
 
-  const isLoading = loading || dataLoading;
-  const displayError = error ?? dataError;
+  const resetForm = (): void => {
+    setSelectedAttributes({});
+    setSelectedTemplate(null);
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold mb-6 text-center">Alien Species Generator</h2>
         
-        {displayError && (
+        {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {typeof displayError === 'string' ? displayError : 'An error occurred'}
+            {error}
           </div>
         )}
 
-        <div className="space-y-4">
-          {/* Species Class Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Species Class</label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md"
-              onChange={(event) => updateField('speciesClass', event.target.value)}
-              value={formData.speciesClass}
-            >
-              <option value="random">Random</option>
-              {availableSpeciesClasses.map(species => (
-                <option key={species} value={species}>{species}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Other form fields */}
-          {(['style', 'environment', 'climate', 'positiveTrait', 'negativeTrait', 'gender'] as const).map(field => (
-            <div key={field}>
-              <label className="block text-sm font-medium mb-1">
-                {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
-              </label>
-              <select
-                className="w-full p-2 border border-gray-300 rounded-md"
-                onChange={(event) => updateField(field, event.target.value)}
-                value={formData[field]}
-              >
-                <option value="random">Random</option>
-              </select>
+        <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void handleGenerate(); }}>
+          {/* Dynamic Alien Attributes */}
+          {Object.entries(alienAttributes).map(([key, config]) => (
+            <div key={key}>
+              <label className="block text-sm font-medium mb-1">{config.label}</label>
+              {config.type === 'select' ? (
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSelectedAttributes(prev => ({
+                      ...prev,
+                      [key]: value === '' ? undefined : value
+                    }));
+                  }}
+                  value={(selectedAttributes[key] as string) || ''}
+                >
+                  <option value="">Any</option>
+                  {config.options.map((option, index) => (
+                    <option key={option.value || `option-${index}`} value={option.value}>
+                      {option.label || option.value}
+                    </option>
+                  ))}
+                </select>
+              ) : config.type === 'multi-select' ? (
+                <select
+                  multiple
+                  className="w-full p-2 border border-gray-300 rounded-md h-24"
+                  onChange={(event) => {
+                    const selectedOptions = Array.from(event.target.selectedOptions, option => option.value);
+                    setSelectedAttributes(prev => ({
+                      ...prev,
+                      [key]: selectedOptions.length > 0 ? selectedOptions : undefined
+                    }));
+                  }}
+                  value={(selectedAttributes[key] as string[]) || []}
+                >
+                  {config.options.map((option, index) => (
+                    <option key={option.value || `option-${index}`} value={option.value}>
+                      {option.label || option.value}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
             </div>
           ))}
 
@@ -102,12 +143,12 @@ const AlienGeneratorPanel: React.FC = () => {
               <select
                 className="w-full p-2 border border-gray-300 rounded-md"
                 onChange={(event) => {
-                  const template = availableTemplates.find(t => t.id.toString() === event.target.value);
+                  const template = availableTemplates.find(t => t.id === event.target.value);
                   setSelectedTemplate(template ?? null);
                 }}
-                value={selectedTemplate?.id?.toString() ?? ''}
+                value={selectedTemplate?.id ?? ''}
               >
-                <option value="">No template (use default prompt structure)</option>
+                <option value="">No template</option>
                 {availableTemplates.map(template => (
                   <option key={template.id} value={template.id}>
                     {template.name}
@@ -117,38 +158,40 @@ const AlienGeneratorPanel: React.FC = () => {
             </div>
           )}
 
-          {/* Prompt Count */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Number of prompts</label>
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium">Number of prompts:</label>
             <input
-              className="w-full p-2 border border-gray-300 rounded-md"
-              max="50"
-              min="1"
+              className="w-20 p-2 border border-gray-300 rounded-md"
+              max={APP_CONSTANTS.PROMPT_COUNT.MAX}
+              min={APP_CONSTANTS.PROMPT_COUNT.MIN}
               onChange={(event) => setPromptCount(Number.parseInt(event.target.value, 10))}
               type="number"
               value={promptCount}
             />
+            <span className="text-xs text-gray-500">
+              (Min: {APP_CONSTANTS.PROMPT_COUNT.MIN}, Max: {APP_CONSTANTS.PROMPT_COUNT.MAX})
+            </span>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-4">
             <button
-              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              disabled={isLoading}
-              onClick={handleGenerate}
+              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400"
+              disabled={loading}
+              type="submit"
             >
-              {isLoading ? 'Generating...' : 'Generate Alien Prompts'}
+              {loading ? 'Generating...' : 'Generate Alien Prompts'}
             </button>
             
             <button
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              disabled={isLoading}
+              disabled={loading}
               onClick={resetForm}
+              type="button"
             >
               Reset Form
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

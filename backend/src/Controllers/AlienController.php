@@ -25,13 +25,17 @@ final class AlienController
             $body = $request->getParsedBody() ?? [];
             
             $count = (int) ($body['count'] ?? 1);
-            $speciesClass = $body['species_class'] ?? null;
-            $climate = $body['climate'] ?? null;
-            $positiveTrait = $body['positive_trait'] ?? null;
-            $negativeTrait = $body['negative_trait'] ?? null;
-            $style = $body['style'] ?? null;
-            $environment = $body['environment'] ?? null;
-            $gender = $body['gender'] ?? null;
+            $attributes = $body['attributes'] ?? [];
+            $templateId = $body['templateId'] ?? null;
+            
+            // Extract specific attributes from the dynamic attributes array
+            $speciesClass = $attributes['species_class'] ?? null;
+            $climate = $attributes['climate'] ?? null;
+            $positiveTrait = $attributes['positive_trait'] ?? null;
+            $negativeTrait = $attributes['negative_trait'] ?? null;
+            $style = $attributes['artistic_style'] ?? null;
+            $environment = $attributes['environment'] ?? null;
+            $gender = $attributes['gender'] ?? null;
 
             $result = $this->generateAlienAction->execute(
                 $count,
@@ -41,7 +45,8 @@ final class AlienController
                 $negativeTrait,
                 $style,
                 $environment,
-                $gender
+                $gender,
+                $templateId
             );
 
             $response->getBody()->write(json_encode($result));

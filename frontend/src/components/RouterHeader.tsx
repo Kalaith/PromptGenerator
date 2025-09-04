@@ -52,13 +52,23 @@ const RouterHeader: React.FC = () => {
         </Link>
         <Link
           to="/description-templates"
-          className={`py-1 px-3 rounded-md transition-colors ${
+          className={`py-1 px-3 rounded-md mr-2 transition-colors ${
             isActive('/description-templates') 
               ? 'bg-blue-700 text-white' 
               : 'bg-white text-blue-500 hover:bg-gray-200'
           }`}
         >
           Description Templates
+        </Link>
+        <Link
+          to="/attribute-manager"
+          className={`py-1 px-3 rounded-md transition-colors ${
+            isActive('/attribute-manager') 
+              ? 'bg-blue-700 text-white' 
+              : 'bg-white text-blue-500 hover:bg-gray-200'
+          }`}
+        >
+          ⚙️ Manage Attributes
         </Link>
       </div>
     </header>

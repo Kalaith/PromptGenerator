@@ -3,6 +3,7 @@ import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
 import { PromptApi, TemplateApi, type Template, type GeneratePromptsRequest } from '../api';
+import type { AttributeConfig } from '../api/types';
 import { APP_CONSTANTS } from '../constants/app';
 
 const GeneratorPanel: React.FC = () => {
@@ -12,6 +13,8 @@ const GeneratorPanel: React.FC = () => {
   const [availableSpecies, setAvailableSpecies] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
+  const [animeAttributes, setAnimeAttributes] = useState<Record<string, AttributeConfig>>({});
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string | string[]>>({});
   
   const addGeneratedPrompts = usePromptStore(state => state.addGeneratedPrompts);
   const { generateAnimePrompts, loading, error, clearError } = usePromptGeneration();
@@ -20,13 +23,19 @@ const GeneratorPanel: React.FC = () => {
   useEffect(() => {
     const loadData = async (): Promise<void> => {
       try {
-        const [speciesResponse, templatesResponse] = await Promise.all([
+        const [speciesResponse, templatesResponse, attributesResponse] = await Promise.all([
           PromptApi.getSpecies(),
           TemplateApi.getPublicTemplates('base'),
+          PromptApi.getGeneratorAttributes('anime'),
         ]);
         
-        setAvailableSpecies(speciesResponse.data.species.map(s => s.name) || []);
+        // Filter for anime species only
+        const animeSpecies = speciesResponse.data.species
+          .filter(s => s.type === 'anime')
+          .map(s => s.name);
+        setAvailableSpecies(animeSpecies || []);
         setAvailableTemplates(templatesResponse);
+        setAnimeAttributes(attributesResponse.data.attributes);
       } catch (loadError) {
         console.error('Failed to load data:', loadError);
       }
@@ -39,10 +48,30 @@ const GeneratorPanel: React.FC = () => {
     clearError();
     
     const safeCount = Math.max(1, Math.min(promptCount, 50));
+    
+    // Map old generation types to new species types
+    const mapTypeToSpeciesType = (generationType: string) => {
+      switch (generationType) {
+        case 'animalGirl':
+        case 'monster':
+        case 'monsterGirl':
+          return 'anime';
+        case 'alien':
+          return 'alien';
+        case 'adventurer':
+          return 'race';
+        case 'random':
+          return undefined;
+        default:
+          return 'anime';
+      }
+    };
+    
     const request: GeneratePromptsRequest = {
       count: safeCount,
-      type: type === 'random' ? undefined : type,
+      type: mapTypeToSpeciesType(type),
       species: species === 'random' ? undefined : species,
+      attributes: Object.keys(selectedAttributes).length > 0 ? selectedAttributes : undefined,
       templateId: selectedTemplate?.id,
     };
 
@@ -111,6 +140,52 @@ const GeneratorPanel: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {/* Dynamic Anime Attributes */}
+          {Object.entries(animeAttributes).map(([key, config]) => (
+            <div key={key}>
+              <label className="block text-sm font-medium mb-1">{config.label}</label>
+              {config.type === 'select' ? (
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSelectedAttributes(prev => ({
+                      ...prev,
+                      [key]: value === '' ? undefined : value
+                    }));
+                  }}
+                  value={(selectedAttributes[key] as string) || ''}
+                >
+                  <option value="">Any</option>
+                  {config.options.map((option, index) => (
+                    <option key={option.value || `option-${index}`} value={option.value}>
+                      {option.label || option.value}
+                    </option>
+                  ))}
+                </select>
+              ) : config.type === 'multi-select' ? (
+                <select
+                  multiple
+                  className="w-full p-2 border border-gray-300 rounded-md h-24"
+                  onChange={(event) => {
+                    const selectedOptions = Array.from(event.target.selectedOptions, option => option.value);
+                    setSelectedAttributes(prev => ({
+                      ...prev,
+                      [key]: selectedOptions.length > 0 ? selectedOptions : undefined
+                    }));
+                  }}
+                  value={(selectedAttributes[key] as string[]) || []}
+                >
+                  {config.options.map((option, index) => (
+                    <option key={option.value || `option-${index}`} value={option.value}>
+                      {option.label || option.value}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+            </div>
+          ))}
 
           {availableTemplates.length > 0 && (
             <div>

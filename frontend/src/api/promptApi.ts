@@ -5,6 +5,7 @@ import type {
   GenerateAlienRequest,
   GenerateAdventurerRequest,
   SpeciesData,
+  AnimeAttributesResponse,
 } from './types';
 
 export interface GeneratePromptsResponse {
@@ -87,6 +88,16 @@ export class PromptApi {
   // Get species types
   static async getSpeciesTypes(): Promise<{ types: string[] }> {
     return apiClient.get<{ types: string[] }>('/species/types');
+  }
+
+  // Get anime attributes (legacy)
+  static async getAnimeAttributes(): Promise<AnimeAttributesResponse> {
+    return apiClient.get<AnimeAttributesResponse>('/anime/attributes');
+  }
+
+  // Get attributes for any generator type (generic)
+  static async getGeneratorAttributes(type: 'anime' | 'alien' | 'adventurer'): Promise<AnimeAttributesResponse> {
+    return apiClient.get<AnimeAttributesResponse>(`/attributes/${type}`);
   }
 
   // Get alien species classes

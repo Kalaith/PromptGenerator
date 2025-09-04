@@ -10,6 +10,11 @@ use AnimePromptGen\Controllers\SpeciesController;
 use AnimePromptGen\Controllers\TemplateController;
 use AnimePromptGen\Controllers\DescriptionTemplateController;
 use AnimePromptGen\Controllers\GameAssetsController;
+use AnimePromptGen\Controllers\AnimeAttributesController;
+use AnimePromptGen\Controllers\GeneratorAttributesController;
+use AnimePromptGen\Controllers\AttributeConfigController;
+use AnimePromptGen\Actions\GetAnimeAttributesAction;
+use AnimePromptGen\Actions\GetGeneratorAttributesAction;
 use AnimePromptGen\Actions\GeneratePromptsAction;
 use AnimePromptGen\Actions\GenerateAdventurerAction;
 use AnimePromptGen\Actions\GenerateAlienAction;
@@ -61,6 +66,8 @@ return [
     GetGameAttributesAction::class => \DI\autowire(),
     GetGameAttributeCategoriesAction::class => \DI\autowire(),
     InitializeGameAttributesAction::class => \DI\autowire(),
+    GetAnimeAttributesAction::class => \DI\autowire(),
+    GetGeneratorAttributesAction::class => \DI\autowire(),
 
     // Controllers
     PromptController::class => \DI\autowire(),
@@ -71,4 +78,7 @@ return [
     TemplateController::class => \DI\autowire(),
     DescriptionTemplateController::class => \DI\autowire(),
     GameAssetsController::class => \DI\autowire(),
+    AnimeAttributesController::class => \DI\autowire(),
+    GeneratorAttributesController::class => \DI\autowire(),
+    AttributeConfigController::class => \DI\autowire(),
 ];

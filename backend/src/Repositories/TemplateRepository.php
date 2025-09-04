@@ -78,7 +78,7 @@ class TemplateRepository
     /**
      * Get popular templates
      */
-    public function getPopular(string $type = null, int $limit = 10): Collection
+    public function getPopular(?string $type = null, int $limit = 10): Collection
     {
         $query = Template::active()->orderBy('usage_count', 'desc');
         
@@ -92,7 +92,7 @@ class TemplateRepository
     /**
      * Get recent templates
      */
-    public function getRecent(string $type = null, int $limit = 10): Collection
+    public function getRecent(?string $type = null, int $limit = 10): Collection
     {
         $query = Template::active()->orderBy('created_at', 'desc');
         
@@ -114,7 +114,7 @@ class TemplateRepository
     /**
      * Get public templates
      */
-    public function getPublic(string $type = null): Collection
+    public function getPublic(?string $type = null): Collection
     {
         $query = Template::active()->public();
         
@@ -142,7 +142,7 @@ class TemplateRepository
     /**
      * Search templates by name or description
      */
-    public function search(string $query, string $type = null): Collection
+    public function search(string $query, ?string $type = null): Collection
     {
         $searchQuery = Template::active()
             ->where(function($q) use ($query) {
