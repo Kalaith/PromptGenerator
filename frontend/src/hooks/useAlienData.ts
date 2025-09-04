@@ -12,9 +12,11 @@ export const useAlienData = () => {
       setLoading(true);
       setError(null);
 
-      // Load species classes
-      const response = await PromptApi.getAlienSpeciesClasses();
-      setAvailableSpeciesClasses(response.species_classes);
+      // Load species classes from unified species
+      const speciesResponse = await PromptApi.getSpecies();
+      const alienSpecies = speciesResponse.data.species.filter(s => s.type === 'alien');
+      const speciesClasses = [...new Set(alienSpecies.map(s => s.category))];
+      setAvailableSpeciesClasses(speciesClasses);
 
       // Load alien templates
       const templates = await TemplateApi.getPublicTemplates('alien');

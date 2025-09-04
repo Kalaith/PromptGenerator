@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace AnimePromptGen\Actions;
 
-use AnimePromptGen\External\SpeciesRepository;
+use AnimePromptGen\External\UnifiedSpeciesRepository;
 
 final class GetSpeciesAction
 {
     public function __construct(
-        private readonly SpeciesRepository $speciesRepository
+        private readonly UnifiedSpeciesRepository $speciesRepository
     ) {}
 
     public function execute(?string $type = null): array
     {
         try {
             if ($type) {
-                $species = $this->speciesRepository->findActiveByType($type);
+                $species = $this->speciesRepository->findByType($type);
             } else {
                 $species = $this->speciesRepository->getAllActive();
             }
@@ -27,9 +27,18 @@ final class GetSpeciesAction
                         'id' => $species->id,
                         'name' => $species->name,
                         'type' => $species->type,
-                        'species_name' => $species->species_name,
+                        'category' => $species->category,
+                        'ears' => $species->ears,
+                        'tail' => $species->tail,
+                        'wings' => $species->wings,
                         'features' => $species->features,
-                        'personality' => $species->personality
+                        'personality' => $species->personality,
+                        'key_traits' => $species->key_traits,
+                        'visual_descriptors' => $species->visual_descriptors,
+                        'physical_features' => $species->physical_features,
+                        'ai_prompt_elements' => $species->ai_prompt_elements,
+                        'is_active' => $species->is_active,
+                        'weight' => $species->weight
                     ];
                 })->toArray()
             ];

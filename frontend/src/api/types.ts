@@ -59,16 +59,19 @@ export interface UpdateSessionRequest {
 export interface SpeciesData {
   id: number;
   name: string;
-  type: string;
-  species_name?: string;
+  type: 'anime' | 'alien' | 'fantasy' | 'sci_fi' | 'race';
+  category: string;
   ears?: string;
   tail?: string;
   wings?: string;
   features?: string[];
   personality?: string[];
-  negative_prompt?: string;
-  description_template?: string;
+  key_traits?: string[];
+  visual_descriptors?: string[];
+  physical_features?: string[];
+  ai_prompt_elements?: string;
   is_active: boolean;
+  weight: number;
   created_at: string;
   updated_at: string;
 }

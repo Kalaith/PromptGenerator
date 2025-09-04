@@ -21,11 +21,11 @@ const GeneratorPanel: React.FC = () => {
     const loadData = async (): Promise<void> => {
       try {
         const [speciesResponse, templatesResponse] = await Promise.all([
-          PromptApi.getSpeciesData(),
+          PromptApi.getSpecies(),
           TemplateApi.getPublicTemplates('base'),
         ]);
         
-        setAvailableSpecies(speciesResponse.species || []);
+        setAvailableSpecies(speciesResponse.data.species.map(s => s.name) || []);
         setAvailableTemplates(templatesResponse);
       } catch (loadError) {
         console.error('Failed to load data:', loadError);

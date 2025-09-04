@@ -7,7 +7,7 @@ namespace AnimePromptGen\Services;
 use AnimePromptGen\External\AdventurerClassRepository;
 use AnimePromptGen\External\AttributeRepository;
 use AnimePromptGen\External\GameAssetRepository;
-use AnimePromptGen\External\SpeciesRepository;
+use AnimePromptGen\External\UnifiedSpeciesRepository;
 use AnimePromptGen\External\DescriptionTemplateRepository;
 use AnimePromptGen\Models\AdventurerClass;
 
@@ -40,7 +40,7 @@ final class AdventurerGenerationService extends BaseGenerationService
 
     public function __construct(
         private readonly AdventurerClassRepository $classRepository,
-        private readonly SpeciesRepository $speciesRepository,
+        private readonly UnifiedSpeciesRepository $speciesRepository,
         AttributeRepository $attributeRepository,
         GameAssetRepository $gameAssetRepository,
         RandomGeneratorService $randomGenerator,

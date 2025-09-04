@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace AnimePromptGen\Services;
 
-use AnimePromptGen\External\SpeciesRepository;
+use AnimePromptGen\External\UnifiedSpeciesRepository;
 use AnimePromptGen\External\AttributeRepository;
 use AnimePromptGen\External\GameAssetRepository;
-use AnimePromptGen\Models\Species;
+use AnimePromptGen\Models\UnifiedSpecies;
 
 final class PromptGenerationService extends BaseGenerationService
 {
     public function __construct(
-        private readonly SpeciesRepository $speciesRepository,
+        private readonly UnifiedSpeciesRepository $speciesRepository,
         AttributeRepository $attributeRepository,
         GameAssetRepository $gameAssetRepository,
         RandomGeneratorService $randomGenerator

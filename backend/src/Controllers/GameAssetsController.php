@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace AnimePromptGen\Controllers;
 
-use AnimePromptGen\External\GameAssetRepository;
+use AnimePromptGen\Actions\GetGameAttributesAction;
+use AnimePromptGen\Actions\GetGameAttributeCategoriesAction;
+use AnimePromptGen\Actions\InitializeGameAttributesAction;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class GameAssetsController
 {
     public function __construct(
-        private readonly GameAssetRepository $gameAssetRepository
+        private readonly GetGameAttributesAction $getGameAttributesAction,
+        private readonly GetGameAttributeCategoriesAction $getGameAttributeCategoriesAction,
+        private readonly InitializeGameAttributesAction $initializeGameAttributesAction
     ) {}
 
     /**
@@ -19,29 +23,24 @@ final class GameAssetsController
      */
     public function getAssetsByType(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $type = $request->getAttribute('type');
-        
-        if (!$type) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'error' => 'Type parameter is required'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
-        }
-
         try {
-            $assets = $this->gameAssetRepository->getByType($type);
-            $assetNames = array_map(fn($asset) => $asset->name, $assets);
+            $type = $request->getAttribute('type');
+            $result = $this->getGameAttributesAction->execute($type);
             
             $response->getBody()->write(json_encode([
                 'success' => true,
-                'data' => [
-                    'type' => $type,
-                    'assets' => $assetNames
-                ]
+                'data' => $result
             ]));
             
             return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+
+        } catch (\InvalidArgumentException $e) {
+            $response->getBody()->write(json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
 
         } catch (\Exception $e) {
             $response->getBody()->write(json_encode([
@@ -58,28 +57,24 @@ final class GameAssetsController
      */
     public function getCategoriesByType(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $type = $request->getAttribute('type');
-        
-        if (!$type) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'error' => 'Type parameter is required'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
-        }
-
         try {
-            $categories = $this->gameAssetRepository->getCategoriesByType($type);
+            $type = $request->getAttribute('type');
+            $result = $this->getGameAttributeCategoriesAction->execute($type);
             
             $response->getBody()->write(json_encode([
                 'success' => true,
-                'data' => [
-                    'type' => $type,
-                    'categories' => $categories
-                ]
+                'data' => $result
             ]));
             
             return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+
+        } catch (\InvalidArgumentException $e) {
+            $response->getBody()->write(json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
 
         } catch (\Exception $e) {
             $response->getBody()->write(json_encode([
@@ -97,11 +92,11 @@ final class GameAssetsController
     public function initializeAssets(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         try {
-            $this->gameAssetRepository->initializeDefaultAssets();
+            $result = $this->initializeGameAttributesAction->execute();
             
             $response->getBody()->write(json_encode([
                 'success' => true,
-                'message' => 'Default assets initialized successfully'
+                'data' => $result
             ]));
             
             return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
@@ -122,12 +117,13 @@ final class GameAssetsController
     public function getAssetTypes(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         try {
-            $types = ['climate', 'gender', 'artistic_style', 'environment', 'cultural_artifact'];
+            $types = ['climate', 'gender', 'artistic_style', 'environment', 'cultural_artifact', 'experience_level'];
             
             $response->getBody()->write(json_encode([
                 'success' => true,
                 'data' => [
-                    'types' => $types
+                    'types' => $types,
+                    'count' => count($types)
                 ]
             ]));
             

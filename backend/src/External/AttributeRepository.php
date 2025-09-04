@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace AnimePromptGen\External;
 
-use AnimePromptGen\Models\Attribute;
+use AnimePromptGen\Models\GameAttribute;
 use Illuminate\Database\Eloquent\Collection;
 
 final class AttributeRepository
 {
-    public function findById(int $id): ?Attribute
+    public function findById(int $id): ?GameAttribute
     {
-        return Attribute::find($id);
+        return GameAttribute::find($id);
     }
 
     public function findByCategory(string $category): Collection
     {
-        return Attribute::active()->byCategory($category)->ordered()->get();
+        return GameAttribute::active()->byCategory($category)->ordered()->get();
     }
 
     public function getRandomByCategory(string $category, int $count = 1): Collection
     {
-        return Attribute::active()
+        return GameAttribute::active()
             ->byCategory($category)
             ->inRandomOrder()
             ->limit($count)
@@ -30,29 +30,29 @@ final class AttributeRepository
 
     public function getAllActive(): Collection
     {
-        return Attribute::active()->ordered()->get();
+        return GameAttribute::active()->ordered()->get();
     }
 
-    public function create(Attribute $attribute): Attribute
+    public function create(GameAttribute $attribute): GameAttribute
     {
         $attribute->save();
         return $attribute;
     }
 
-    public function update(Attribute $attribute): Attribute
+    public function update(GameAttribute $attribute): GameAttribute
     {
         $attribute->save();
         return $attribute;
     }
 
-    public function delete(Attribute $attribute): bool
+    public function delete(GameAttribute $attribute): bool
     {
         return $attribute->delete();
     }
 
     public function getAllCategories(): array
     {
-        return Attribute::active()
+        return GameAttribute::active()
             ->distinct()
             ->pluck('category')
             ->toArray();
@@ -60,7 +60,7 @@ final class AttributeRepository
 
     public function getAttributeValues(string $category): array
     {
-        return Attribute::active()
+        return GameAttribute::active()
             ->byCategory($category)
             ->ordered()
             ->pluck('value')
