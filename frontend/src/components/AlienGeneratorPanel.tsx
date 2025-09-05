@@ -220,7 +220,7 @@ const AlienGeneratorPanel: React.FC = () => {
               {/* Action buttons */}
               <div className="pt-4 flex gap-4">
                 <button
-                  className="flex-1 bg-gradient-mystic text-white py-4 px-8 rounded-xl font-bold text-lg
+                  className="flex-1 bg-gradient-mystic text-black py-4 px-8 rounded-xl font-bold text-lg
                            shadow-glow-violet hover:shadow-glow transform hover:scale-105 transition-all duration-300
                            focus:outline-none focus:ring-4 focus:ring-violet-200 disabled:opacity-50 
                            disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none

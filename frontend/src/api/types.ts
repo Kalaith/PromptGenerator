@@ -11,9 +11,10 @@ export interface ApiPrompt {
 
 export interface GeneratePromptsRequest {
   count: number;
-  type: 'animalGirl' | 'monster' | 'monsterGirl';
+  type: 'animalGirl' | 'monster' | 'monsterGirl' | 'anime' | 'alien' | 'race' | 'random';
   species?: string;
   attributes?: Record<string, string>;
+  templateId?: number;
 }
 
 export interface GenerateAlienRequest {

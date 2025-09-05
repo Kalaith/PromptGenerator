@@ -1,18 +1,26 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { getGeneratorTypes } from '../config/generatorTypes';
 
 const RouterHeader: React.FC = () => {
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Get dynamic generator types plus static admin pages
+  const generatorTypes = getGeneratorTypes();
   const navItems = [
-    { path: '/anime', label: 'Anime Generator', icon: '🎨' },
-    { path: '/adventurer', label: 'Adventurer Generator', icon: '⚔️' },
-    { path: '/alien', label: 'Alien Generator', icon: '👽' },
+    // Dynamic generator types
+    ...generatorTypes.map(type => ({
+      path: `/${type.slug}`,
+      label: type.name,
+      icon: type.icon
+    })),
+    // Static admin pages
     { path: '/templates', label: 'Templates', icon: '📝' },
     { path: '/description-templates', label: 'Description Templates', icon: '📖' },
     { path: '/attribute-manager', label: 'Manage Attributes', icon: '⚙️' },
+    { path: '/generator-types', label: 'Generator Types', icon: '🔧' },
   ];
 
   return (

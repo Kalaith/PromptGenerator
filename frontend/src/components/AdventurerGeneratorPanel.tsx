@@ -186,7 +186,7 @@ const AdventurerGeneratorPanel: React.FC = () => {
               {/* Generate button */}
               <div className="pt-4">
                 <button
-                  className="w-full bg-gradient-ocean text-white py-4 px-8 rounded-xl font-bold text-lg
+                  className="w-full bg-gradient-ocean text-black py-4 px-8 rounded-xl font-bold text-lg
                            shadow-glow-ocean hover:shadow-glow-violet transform hover:scale-105 transition-all duration-300
                            focus:outline-none focus:ring-4 focus:ring-ocean-200 disabled:opacity-50 
                            disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none
