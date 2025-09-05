@@ -34,7 +34,7 @@ const AttributeManager: React.FC = () => {
     try {
       setLoading(true);
       const response = await apiClient.get<{ success: boolean; data: AttributeConfig[] }>('/attribute-config');
-      if (response.success) {
+      if ((response as any).success) {
         setConfigs(response.data);
       } else {
         setError('Failed to load attribute configurations');
@@ -49,7 +49,7 @@ const AttributeManager: React.FC = () => {
   const updateConfig = async (id: number, updates: Partial<AttributeConfig>) => {
     try {
       const response = await apiClient.put(`/attribute-config/${id}`, updates);
-      if (response.success) {
+      if ((response as any).success) {
         setConfigs(configs.map(config => 
           config.id === id ? { ...config, ...updates } : config
         ));
@@ -88,7 +88,7 @@ const AttributeManager: React.FC = () => {
         sort_order: newAttribute.sort_order || Math.max(...configs.filter(c => c.generator_type === generatorType).map(c => c.sort_order)) + 10
       });
       
-      if (response.success) {
+      if ((response as any).success) {
         await loadConfigs(); // Reload to get the new attribute
         setShowAddForm(null);
         setNewAttribute({ category: '', label: '', input_type: 'select', sort_order: 0 });
@@ -107,7 +107,7 @@ const AttributeManager: React.FC = () => {
 
     try {
       const response = await apiClient.delete(`/attribute-config/${id}`);
-      if (response.success) {
+      if ((response as any).success) {
         setConfigs(configs.filter(config => config.id !== id));
       } else {
         setError('Failed to delete attribute');
@@ -126,23 +126,45 @@ const AttributeManager: React.FC = () => {
     return groups;
   }, {} as Record<string, AttributeConfig[]>);
 
-  if (loading) return <div className="p-6">Loading attribute configurations...</div>;
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-8 text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-sakura-200 border-t-sakura-500 rounded-full mx-auto mb-4"></div>
+            <p className="text-dark-600 font-medium">Loading attribute configurations...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Attribute Configuration Manager</h1>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-          <button 
-            onClick={() => setError('')}
-            className="ml-2 text-red-900 hover:text-red-700"
-          >
-            ×
-          </button>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-4xl font-heading font-bold bg-gradient-sunset bg-clip-text text-transparent mb-4">
+            ⚙️ Attribute Configuration Manager
+          </h1>
+          <p className="text-dark-600 text-lg">Customize generator attributes and options</p>
         </div>
-      )}
+        
+        {/* Error display */}
+        {error && (
+          <div className="p-4 bg-danger-50 border border-danger-200 text-danger-700 rounded-xl flex items-center justify-between animate-fade-in">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">⚠️</span>
+              <span className="font-medium">{error}</span>
+            </div>
+            <button 
+              onClick={() => setError('')}
+              className="text-danger-600 hover:text-danger-800 text-xl font-bold"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
         <h2 className="font-semibold text-blue-900 mb-2">How to Use:</h2>
@@ -341,17 +363,25 @@ const AttributeManager: React.FC = () => {
         </div>
       ))}
       
-      <div className="mt-8 p-4 bg-gray-50 border border-gray-200 rounded">
-        <h3 className="font-semibold mb-2">Quick Actions:</h3>
-        <div className="flex gap-4 text-sm">
-          <button
-            onClick={loadConfigs}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Refresh Data
-          </button>
-          <div className="text-gray-600">
-            Total Configurations: {configs.length}
+        {/* Footer */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+              <h3 className="font-semibold text-dark-700 flex items-center gap-2">
+                <span>⚡</span> Quick Actions
+              </h3>
+              <button
+                onClick={loadConfigs}
+                className="bg-gradient-ocean text-white px-6 py-3 rounded-xl font-semibold
+                         shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300
+                         flex items-center gap-2"
+              >
+                <span>🔄</span> Refresh Data
+              </button>
+            </div>
+            <div className="bg-gradient-sunset bg-clip-text text-transparent font-bold text-lg">
+              Total Configurations: {configs.length}
+            </div>
           </div>
         </div>
       </div>
