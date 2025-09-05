@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
+import { getGeneratorTypes } from '../config/generatorTypes';
 
 interface AttributeConfig {
   id: number;
-  generator_type: 'anime' | 'alien' | 'adventurer';
+  generator_type: string;
   category: string;
   label: string;
   input_type: 'select' | 'multi-select' | 'text' | 'number' | 'checkbox';
@@ -117,6 +118,9 @@ const AttributeManager: React.FC = () => {
     }
   };
 
+  // Get available generator types from the unified config
+  const availableGeneratorTypes = getGeneratorTypes(true); // include inactive types
+
   const groupedConfigs = configs.reduce((groups, config) => {
     const type = config.generator_type;
     if (!groups[type]) {
@@ -125,6 +129,13 @@ const AttributeManager: React.FC = () => {
     groups[type].push(config);
     return groups;
   }, {} as Record<string, AttributeConfig[]>);
+
+  // Ensure all generator types have entries, even if empty
+  availableGeneratorTypes.forEach(generatorType => {
+    if (!groupedConfigs[generatorType.apiType]) {
+      groupedConfigs[generatorType.apiType] = [];
+    }
+  });
 
   if (loading) {
     return (
@@ -176,12 +187,36 @@ const AttributeManager: React.FC = () => {
         </ul>
       </div>
 
-      {Object.entries(groupedConfigs).map(([generatorType, typeConfigs]) => (
-        <div key={generatorType} className="mb-8">
+      {Object.entries(groupedConfigs).map(([generatorType, typeConfigs]) => {
+        // Find the generator type config for display info
+        const generatorTypeConfig = availableGeneratorTypes.find(gt => gt.apiType === generatorType);
+        const displayName = generatorTypeConfig ? generatorTypeConfig.name : generatorType;
+        const displayIcon = generatorTypeConfig ? generatorTypeConfig.icon : '🔧';
+        const isActive = generatorTypeConfig ? generatorTypeConfig.isActive : false;
+        
+        return (
+        <div key={generatorType} className={`mb-8 ${!isActive ? 'opacity-60' : ''}`}>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold capitalize bg-blue-100 text-blue-900 p-3 rounded border border-blue-200">
-              {generatorType} Generator Attributes ({typeConfigs.length})
-            </h2>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{displayIcon}</span>
+              <div>
+                <h2 className={`text-2xl font-semibold p-3 rounded border ${
+                  isActive 
+                    ? 'bg-blue-100 text-blue-900 border-blue-200' 
+                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                }`}>
+                  {displayName} Generator Attributes ({typeConfigs.length})
+                </h2>
+                {!isActive && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    ⚠️ This generator type is inactive. Enable it in Generator Type Manager to use these attributes.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  API Type: <code className="bg-gray-100 px-1 rounded">{generatorType}</code>
+                </p>
+              </div>
+            </div>
             <button
               onClick={() => setShowAddForm(generatorType)}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
@@ -291,7 +326,10 @@ const AttributeManager: React.FC = () => {
           {/* Add Attribute Form */}
           {showAddForm === generatorType && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded">
-              <h3 className="font-semibold mb-3">Add New Attribute to {generatorType} Generator</h3>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <span>{displayIcon}</span>
+                Add New Attribute to {displayName} Generator
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Category *</label>
@@ -361,7 +399,8 @@ const AttributeManager: React.FC = () => {
             </div>
           )}
         </div>
-      ))}
+      )
+      })}
       
         {/* Footer */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6">

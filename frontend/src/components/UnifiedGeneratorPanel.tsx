@@ -1,10 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { usePromptStore } from '../stores/promptStore';
 import { PromptApi } from '../api/promptApi';
-import type { GeneratePromptsRequest, DescriptionTemplate, AnimeAttributesResponse } from '../api/types';
+import { apiClient } from '../api/client';
+import type { GeneratePromptsRequest, AnimeAttributesResponse } from '../api/types';
+import type { DescriptionTemplate } from '../api/descriptionTemplateApi';
 import { usePromptGeneration } from '../hooks/usePromptGeneration';
 import { useSession } from '../hooks/useSession';
 import { GeneratorTypeConfig } from '../config/generatorTypes';
+
+interface AttributeConfig {
+  id: number;
+  generator_type: string;
+  category: string;
+  label: string;
+  input_type: 'select' | 'multi-select' | 'text' | 'number' | 'checkbox';
+  is_active: boolean;
+  sort_order: number;
+}
 
 interface UnifiedGeneratorPanelProps {
   config: GeneratorTypeConfig;
@@ -16,8 +28,9 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
   const [availableSpecies, setAvailableSpecies] = useState<string[]>([]);
   const [availableTemplates, setAvailableTemplates] = useState<DescriptionTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<DescriptionTemplate | null>(null);
-  const [animeAttributes, setAnimeAttributes] = useState<AnimeAttributesResponse['data']>({});
-  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string | string[]>>({});
+  const [attributeConfigs, setAttributeConfigs] = useState<AttributeConfig[]>([]);
+  const [attributeOptions, setAttributeOptions] = useState<Record<string, Array<{label: string, value: string}>>>({});
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
 
   const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
   const { generateAnimePrompts, loading, error, clearError } = usePromptGeneration();
@@ -26,26 +39,55 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
   useEffect(() => {
     const loadData = async (): Promise<void> => {
       try {
-        // Determine which API to use based on generator type
-        let attributeType: 'anime' | 'alien' | 'adventurer' = 'anime';
-        if (config.id === 'alien') {
-          attributeType = 'alien';
-        } else if (config.id === 'adventurer') {
-          attributeType = 'adventurer';
-        }
-
-        const [speciesResponse, templatesResponse, attributesResponse] = await Promise.all([
+        const [speciesResponse, attributeConfigResponse] = await Promise.all([
           PromptApi.getSpecies(),
-          PromptApi.getGeneratorAttributes(attributeType),
-          PromptApi.getGeneratorAttributes(attributeType)
+          apiClient.get<{ success: boolean; data: AttributeConfig[] }>('/attribute-config')
         ]);
         
         if (speciesResponse.success) {
           setAvailableSpecies(speciesResponse.data.species.map(s => s.name));
         }
         
-        if (attributesResponse && attributesResponse.data) {
-          setAnimeAttributes(attributesResponse.data);
+        // Filter attribute configs for this generator type
+        if (attributeConfigResponse.success) {
+          console.log(`Debug: All attribute configs from API:`, attributeConfigResponse.data);
+          console.log(`Debug: Looking for generator_type:`, config.apiType);
+          
+          const relevantConfigs = attributeConfigResponse.data
+            .filter(attrConfig => attrConfig.generator_type === config.apiType && attrConfig.is_active)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          
+          console.log(`Debug: Filtered configs for ${config.apiType}:`, relevantConfigs);
+          setAttributeConfigs(relevantConfigs);
+          
+          // Initialize selected attributes with 'any' for all configured categories
+          const initialAttributes: Record<string, string> = {};
+          relevantConfigs.forEach(config => {
+            initialAttributes[config.category] = 'any';
+          });
+          setSelectedAttributes(initialAttributes);
+          console.log(`Debug: Initialized attributes:`, initialAttributes);
+          
+          // Load options for all categories at once
+          try {
+            console.log(`Debug: Loading attribute options for ${config.apiType}`);
+            const optionsResponse = await PromptApi.getGeneratorAttributes(config.apiType as any);
+            console.log(`Debug: Options response:`, optionsResponse);
+            
+            if (optionsResponse?.data?.attributes) {
+              const optionsMap: Record<string, Array<{label: string, value: string}>> = {};
+              
+              // Map the response data to our internal format
+              Object.entries(optionsResponse.data.attributes).forEach(([category, categoryData]: [string, any]) => {
+                optionsMap[category] = categoryData.options || [];
+              });
+              
+              console.log(`Debug: Final options map:`, optionsMap);
+              setAttributeOptions(optionsMap);
+            }
+          } catch (error) {
+            console.error('Failed to load attribute options:', error);
+          }
         }
       } catch (error) {
         console.error('Failed to load generator data:', error);
@@ -53,7 +95,7 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
     };
     
     void loadData();
-  }, [config.id]);
+  }, [config.id, config.apiType]);
 
   const handleGenerate = async (): Promise<void> => {
     clearError();
@@ -64,11 +106,14 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
       count: safeCount,
       type: config.apiType as any, // Use the API type from config
       species: species === 'random' ? 'random' : species,
-      attributes: Object.keys(selectedAttributes).length > 0 ? selectedAttributes : undefined,
-      templateId: selectedTemplate?.id,
+      attributes: selectedAttributes, // Always include attributes since they default to 'any'
+      ...(selectedTemplate?.id && { templateId: selectedTemplate.id }),
     };
 
     console.log(`Debug: ${config.name} Request being sent:`, request);
+    console.log(`Debug: Selected attributes:`, selectedAttributes);
+    console.log(`Debug: Attribute configs:`, attributeConfigs);
+    console.log(`Debug: Attribute options:`, attributeOptions);
 
     try {
       const apiPrompts = await generateAnimePrompts(request);
@@ -171,16 +216,16 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
             </div>
 
             {/* Dynamic Attributes */}
-            {Object.keys(animeAttributes).length > 0 && (
+            {attributeConfigs.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <span>🎭</span> Character Attributes
+                  <span>🎭</span> Custom Attributes
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {Object.entries(animeAttributes).map(([key, attrConfig]) => (
-                    <div key={key} className="space-y-2">
+                  {attributeConfigs.map((attrConfig) => (
+                    <div key={attrConfig.id} className="space-y-2">
                       <label className="block text-sm font-semibold text-slate-700">{attrConfig.label}</label>
-                      {attrConfig.type === 'select' ? (
+                      {attrConfig.input_type === 'select' ? (
                         <select
                           className={`w-full p-3 border-2 border-gray-300 rounded-lg bg-white 
                                    ${getFocusClasses(config.focusColor)} transition-all duration-300
@@ -189,16 +234,15 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
                             const value = event.target.value;
                             setSelectedAttributes(prev => {
                               if (value === '') {
-                                const { [key]: _, ...rest } = prev;
-                                return rest;
+                                return { ...prev, [attrConfig.category]: 'any' };
                               }
-                              return { ...prev, [key]: value };
+                              return { ...prev, [attrConfig.category]: value };
                             });
                           }}
-                          value={(selectedAttributes[key] as string) || ''}
+                          value={selectedAttributes[attrConfig.category] || ''}
                         >
                           <option value="">Any</option>
-                          {attrConfig.options.map((option, index) => (
+                          {(attributeOptions[attrConfig.category] || []).map((option, index) => (
                             <option key={option.value || `option-${index}`} value={option.value}>
                               {option.label || option.value}
                             </option>
@@ -213,15 +257,14 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
                             const value = event.target.value;
                             setSelectedAttributes(prev => {
                               if (value === '') {
-                                const { [key]: _, ...rest } = prev;
-                                return rest;
+                                return { ...prev, [attrConfig.category]: 'any' };
                               }
-                              return { ...prev, [key]: value };
+                              return { ...prev, [attrConfig.category]: value };
                             });
                           }}
                           placeholder={`Enter ${attrConfig.label?.toLowerCase() || 'value'}...`}
                           type="text"
-                          value={(selectedAttributes[key] as string) || ''}
+                          value={selectedAttributes[attrConfig.category] || ''}
                         />
                       )}
                     </div>

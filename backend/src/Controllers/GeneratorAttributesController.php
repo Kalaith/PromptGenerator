@@ -30,12 +30,14 @@ final class GeneratorAttributesController
                     ->withStatus(400);
             }
 
-            // Validate generator type
-            $validTypes = ['anime', 'alien', 'adventurer'];
-            if (!in_array($generatorType, $validTypes)) {
+            // Dynamic validation: Check if generator type exists in attribute_config
+            $db = \Illuminate\Database\Capsule\Manager::table('attribute_config');
+            $typeExists = $db->where('generator_type', $generatorType)->exists();
+            
+            if (!$typeExists) {
                 $response->getBody()->write(json_encode([
                     'success' => false,
-                    'error' => 'Invalid generator type. Must be one of: ' . implode(', ', $validTypes)
+                    'error' => 'Generator type not found: ' . $generatorType
                 ]));
                 
                 return $response

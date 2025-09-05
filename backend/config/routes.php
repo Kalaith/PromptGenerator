@@ -142,6 +142,12 @@ return function (App $app) {
     $app->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
     $app->get('/aliens/climates', [AlienController::class, 'getClimates']);
     
+    // Attribute configuration management (direct access)
+    $app->get('/attribute-config', [AttributeConfigController::class, 'getConfigs']);
+    $app->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
+    $app->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
+    $app->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
+    
     // Health check (direct access)
     $app->get('/health', function ($request, $response) {
         $response->getBody()->write(json_encode([

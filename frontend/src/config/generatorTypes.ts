@@ -75,14 +75,27 @@ export const defaultGeneratorTypes: GeneratorTypeConfig[] = [
 ];
 
 // This would eventually be loaded from a backend API/database
-export const getGeneratorTypes = (): GeneratorTypeConfig[] => {
-  // For now, return the static config
-  // Later this would make an API call to get dynamic config from database
-  return defaultGeneratorTypes.filter(type => type.isActive).sort((a, b) => a.order - b.order);
+export const getGeneratorTypes = (includeInactive = false): GeneratorTypeConfig[] => {
+  // Load from localStorage or use defaults
+  const saved = localStorage.getItem('generatorTypes');
+  let types: GeneratorTypeConfig[];
+  
+  if (saved) {
+    try {
+      types = JSON.parse(saved);
+    } catch {
+      types = [...defaultGeneratorTypes];
+    }
+  } else {
+    types = [...defaultGeneratorTypes];
+  }
+
+  const filtered = includeInactive ? types : types.filter(type => type.isActive);
+  return filtered.sort((a, b) => a.order - b.order);
 };
 
 export const getGeneratorTypeBySlug = (slug: string): GeneratorTypeConfig | undefined => {
-  return getGeneratorTypes().find(type => type.slug === slug);
+  return getGeneratorTypes(true).find(type => type.slug === slug);
 };
 
 export const getAnimeGeneratorTypes = (): GeneratorTypeConfig[] => {

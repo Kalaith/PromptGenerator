@@ -1,9 +1,9 @@
 import React from 'react';
 import { APP_CONSTANTS } from '../../constants/app';
 import { ValidationUtils } from '../../utils/validation';
-import { SelectField } from './SelectField';
-import { NumberField } from './NumberField';
-import { TextField } from './TextField';
+import { SelectField } from '../forms/SelectField';
+import { NumberField } from '../forms/NumberField';
+import { TextField } from '../forms/TextField';
 
 interface GeneratorFormProps {
   onSubmit: (event: React.FormEvent) => void;

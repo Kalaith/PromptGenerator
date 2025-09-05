@@ -4,11 +4,11 @@ interface FormFieldProps {
   label: string;
   id: string;
   children: ReactNode;
-  error?: string;
-  helpText?: string;
+  error?: string | undefined;
+  helpText?: string | undefined;
   required?: boolean;
   className?: string;
-  'data-testid'?: string;
+  'data-testid'?: string | undefined;
 }
 
 export const FormField: React.FC<FormFieldProps> = ({ 

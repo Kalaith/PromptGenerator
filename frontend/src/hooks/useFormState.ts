@@ -4,16 +4,16 @@ import { AppError } from '../types/errors';
 
 export interface FormField<T = any> {
   value: T;
-  error?: string;
+  error?: string | undefined;
   touched: boolean;
-  validator?: (value: T) => ValidationResult;
+  validator?: ((value: T) => ValidationResult) | undefined;
 }
 
 export interface FormState<T extends Record<string, any>> {
   fields: { [K in keyof T]: FormField<T[K]> };
   isValid: boolean;
   isSubmitting: boolean;
-  submitError?: AppError;
+  submitError?: AppError | undefined;
 }
 
 export interface FormActions<T extends Record<string, any>> {
@@ -25,14 +25,14 @@ export interface FormActions<T extends Record<string, any>> {
   validateAll: () => boolean;
   resetForm: () => void;
   setSubmitting: (submitting: boolean) => void;
-  setSubmitError: (error?: AppError) => void;
+  setSubmitError: (error?: AppError | undefined) => void;
   getFieldProps: <K extends keyof T>(field: K) => {
     value: T[K];
     onChange: (value: T[K]) => void;
     onBlur: () => void;
-    error?: string;
+    error?: string | undefined;
     'aria-invalid': boolean;
-    'aria-describedby'?: string;
+    'aria-describedby'?: string | undefined;
   };
 }
 
