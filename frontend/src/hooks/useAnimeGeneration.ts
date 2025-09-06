@@ -76,9 +76,9 @@ export function useAnimeGeneration(): UseAnimeGenerationResult {
 
     try {
       // Apply template if provided
-      const templateResult = await TemplateService.applyAndUseTemplate(template, {
+      const templateResult = await TemplateService.applyAndUseTemplate(template || null, {
         count: params.count,
-        type: params.type === 'random' ? 'animalGirl' : params.type,
+        type: params.type,
         ...(params.species !== GENERATOR_OPTIONS.RANDOM && { species: params.species }),
       });
 
@@ -116,7 +116,7 @@ export function useAnimeGeneration(): UseAnimeGenerationResult {
   }, [validateParams, generation, addGeneratedPrompts, addToHistory]);
 
   const getFormDefaults = useCallback((): AnimeGenerationParams => ({
-    type: 'random',
+    type: 'animalGirl',
     species: GENERATOR_OPTIONS.RANDOM,
     count: APP_CONSTANTS.PROMPT_COUNT.DEFAULT,
   }), []);

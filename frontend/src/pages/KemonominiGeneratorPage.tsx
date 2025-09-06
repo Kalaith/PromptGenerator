@@ -1,5 +1,5 @@
 import React from 'react';
-import KemonominiGeneratorPanel from '../components/KemonominiGeneratorPanel';
+import KemonominiGeneratorPanel from '../components/_legacy/KemonominiGeneratorPanel';
 import OutputPanel from '../components/OutputPanel';
 import { usePromptStore } from '../stores/promptStore';
 

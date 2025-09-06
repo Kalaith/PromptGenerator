@@ -1,5 +1,5 @@
 import React from 'react';
-import GeneratorPanel from '../components/GeneratorPanel';
+import GeneratorPanel from '../components/_legacy/GeneratorPanel';
 import OutputPanel from '../components/OutputPanel';
 import { usePromptStore } from '../stores/promptStore';
 

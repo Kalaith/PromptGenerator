@@ -43,7 +43,7 @@ const AlienGeneratorPanel: React.FC = () => {
     const generationParams = {
       count: safeCount,
       attributes: Object.keys(selectedAttributes).length > 0 ? selectedAttributes : undefined,
-      templateId: selectedTemplate?.id,
+      ...(selectedTemplate?.id && { templateId: selectedTemplate.id }),
     };
 
     try {

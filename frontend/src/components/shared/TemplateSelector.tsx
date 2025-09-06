@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
-import { SelectField, FormField } from './GeneratorForm';
+import { SelectField } from './GeneratorForm';
+import { FormField } from '../forms/FormField';
 import { TemplateService } from '../../services/templateService';
 import { AppErrorHandler } from '../../types/errors';
 import type { TemplateSelectorProps, SelectOption } from '../../types/components';

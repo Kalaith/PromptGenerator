@@ -41,7 +41,7 @@ export function useDataFetching<T>(
 
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryTimeoutRef = useRef<number | null>(null);
 
   const updateState = useCallback((updates: Partial<UseDataFetchingState<T>>) => {
     if (isMountedRef.current) {

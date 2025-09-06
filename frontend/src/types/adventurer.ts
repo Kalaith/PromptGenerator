@@ -26,14 +26,14 @@ export interface AdventurerFormData {
 
 export interface AdventurerGenerationParams {
   count: number;
-  race?: string;
-  class?: string;
-  experience?: string;
-  gender?: string;
-  style?: string;
-  environment?: string;
-  hairColor?: string;
-  skinColor?: string;
-  eyeColor?: string;
-  eyeStyle?: string;
+  race?: string | undefined;
+  class?: string | undefined;
+  experience?: string | undefined;
+  gender?: string | undefined;
+  style?: string | undefined;
+  environment?: string | undefined;
+  hairColor?: string | undefined;
+  skinColor?: string | undefined;
+  eyeColor?: string | undefined;
+  eyeStyle?: string | undefined;
 }

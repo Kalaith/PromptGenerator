@@ -31,7 +31,7 @@ export const useAlienForm = () => {
     templateId?: string
   ): GenerateAlienRequest => ({
     count,
-    templateId,
+    ...(templateId && { templateId: parseInt(templateId, 10) }),
     species_class: formData.speciesClass === 'random' ? undefined : formData.speciesClass,
     style: formData.style === 'random' ? undefined : formData.style,
     environment: formData.environment === 'random' ? undefined : formData.environment,

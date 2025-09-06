@@ -210,7 +210,6 @@ export function useFormState<T extends Record<string, any>>({
 
   return {
     ...state,
-    values: formValues,
     setField,
     setFieldError,
     touchField,

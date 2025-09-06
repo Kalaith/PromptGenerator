@@ -1,5 +1,5 @@
 import React from 'react';
-import MonsterGirlGeneratorPanel from '../components/MonsterGirlGeneratorPanel';
+import MonsterGirlGeneratorPanel from '../components/_legacy/MonsterGirlGeneratorPanel';
 import OutputPanel from '../components/OutputPanel';
 import { usePromptStore } from '../stores/promptStore';
 

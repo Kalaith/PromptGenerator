@@ -25,7 +25,7 @@ export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
-  description?: string;
+  description?: string | undefined;
 }
 
 export interface SelectFieldProps extends BaseFieldProps {

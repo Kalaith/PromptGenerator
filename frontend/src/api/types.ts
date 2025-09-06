@@ -15,17 +15,20 @@ export interface GeneratePromptsRequest {
   species?: string;
   attributes?: Record<string, string>;
   templateId?: number;
+  [key: string]: unknown;
 }
 
 export interface GenerateAlienRequest {
   count: number;
-  species_class?: string;
-  climate?: string;
-  positive_trait?: string;
-  negative_trait?: string;
-  style?: string;
-  environment?: string;
-  gender?: string;
+  templateId?: number | undefined;
+  species_class?: string | undefined;
+  climate?: string | undefined;
+  positive_trait?: string | undefined;
+  negative_trait?: string | undefined;
+  style?: string | undefined;
+  environment?: string | undefined;
+  gender?: string | undefined;
+  [key: string]: unknown;
 }
 
 export interface GenerateAdventurerRequest {
