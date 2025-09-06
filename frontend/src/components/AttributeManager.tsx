@@ -193,7 +193,9 @@ const AttributeManager: React.FC = () => {
 
   // Sort each group by ID for consistent ordering
   Object.keys(attributeGroups).forEach(category => {
-    attributeGroups[category].sort((a, b) => a.id - b.id);
+    if (attributeGroups[category]) {
+      attributeGroups[category].sort((a, b) => a.id - b.id);
+    }
   });
 
   if (loading) {
@@ -271,6 +273,8 @@ const AttributeManager: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {Object.entries(attributeGroups).map(([category, categoryConfigs]) => {
+                  if (!categoryConfigs || categoryConfigs.length === 0) return null;
+                  
                   const uniqueAttribute = categoryConfigs[0]; // All should have same core info
                   // Use the most common sort order, or the first one if they're all different
                   const sortOrders = categoryConfigs.map(c => c.sort_order);

@@ -84,7 +84,7 @@ export interface Template {
   id: number;
   name: string;
   description?: string;
-  type: 'anime' | 'alien';
+  type: string;
   template_data: Record<string, unknown>;
   is_public: boolean;
   is_active: boolean;
@@ -97,7 +97,7 @@ export interface Template {
 export interface CreateTemplateRequest {
   name: string;
   description?: string;
-  type: 'anime' | 'alien';
+  type: string;
   template_data: Record<string, unknown>;
   is_public?: boolean;
   created_by?: string;
@@ -111,11 +111,30 @@ export interface UpdateTemplateRequest {
 }
 
 export interface TemplateFilters {
-  type?: 'anime' | 'alien';
+  type?: string;
   public_only?: boolean;
   created_by?: string;
   order_by?: string;
   order_direction?: 'asc' | 'desc';
+}
+
+// Gallery and Queue types
+export type GalleryType = 'public' | 'session' | 'featured' | 'collections';
+
+export interface ImageQueueItem {
+  id: number;
+  prompt_id?: number;
+  generator_type: string;
+  prompt_text: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  width: number;
+  height: number;
+  generation_params: Record<string, unknown>;
+  created_at: string;
+  completed_at?: string;
+  error_message?: string;
+  progress?: number;
+  estimated_completion?: string;
 }
 
 // Dynamic attribute types
@@ -230,17 +249,18 @@ export interface ImageCollection {
 }
 
 export interface ImageFilters {
-  type?: string;
+  type?: string | undefined;
   limit?: number;
   page?: number;
-  session_id?: string;
+  session_id?: string | undefined;
   public_only?: boolean;
-  featured?: boolean;
+  featured?: boolean | undefined;
   sort_by?: 'recent' | 'popular' | 'views' | 'downloads';
 }
 
 export interface ImageListResponse {
   success: boolean;
+  message?: string;
   data: {
     images: GeneratedImage[];
     pagination: {

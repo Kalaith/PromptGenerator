@@ -65,7 +65,7 @@ export const TemplateControls: React.FC<TemplateControlsProps> = ({
             value={selectedTemplate?.id.toString() || ''}
             onChange={(e) => handleTemplateChange(e.target.value)}
             className={`w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-dark-700
-                       transition-all duration-200 hover:border-gray-400 ${getFocusClasses(config.baseColor)}`}
+                       transition-all duration-200 hover:border-gray-400 ${getFocusClasses(config.focusColor)}`}
           >
             <option value="">No Template (Generate Fresh)</option>
             {availableTemplates.map((template) => (
@@ -159,7 +159,7 @@ export const TemplateControls: React.FC<TemplateControlsProps> = ({
                           onChange={(e) => handleTemplateDataChange(key, e.target.value)}
                           placeholder={String(originalValue)}
                           className={`w-full px-3 py-2 text-xs border border-gray-300 rounded-lg
-                                     transition-all duration-200 ${getFocusClasses(config.baseColor)}`}
+                                     transition-all duration-200 ${getFocusClasses(config.focusColor)}`}
                         />
                       </div>
                     ))}

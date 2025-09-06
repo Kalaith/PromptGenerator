@@ -330,7 +330,7 @@ const AttributeOptionsManager: React.FC = () => {
                         </div>
                       )}
                       
-                      {categoryOptions[category.category].length > 0 ? (
+                      {categoryOptions[category.category] && categoryOptions[category.category].length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {categoryOptions[category.category]
                             .sort((a, b) => (b.weight || 1) - (a.weight || 1) || a.label.localeCompare(b.label))
