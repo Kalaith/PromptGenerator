@@ -4,6 +4,7 @@ import { useUnifiedGenerator } from '../hooks/useUnifiedGenerator';
 import { GeneratorHeader } from './generator/GeneratorHeader';
 import { BasicControls } from './generator/BasicControls';
 import { AttributeControls } from './generator/AttributeControls';
+import { TemplateControls } from './generator/TemplateControls';
 import { GenerateButton } from './generator/GenerateButton';
 import { ImageGenerationControls } from './generator/ImageGenerationControls';
 import { ErrorDisplay } from './ui/ErrorDisplay';
@@ -17,6 +18,8 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
     promptCount,
     species,
     availableSpecies,
+    availableTemplates,
+    selectedTemplate,
     attributeConfigs,
     attributeOptions,
     selectedAttributes,
@@ -25,6 +28,7 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
     imageHeight,
     setPromptCount,
     setSpecies,
+    setSelectedTemplate,
     updateSelectedAttribute,
     setImageGenerationEnabled,
     setImageWidth,
@@ -89,6 +93,14 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
               attributeOptions={attributeOptions}
               selectedAttributes={selectedAttributes}
               onAttributeChange={updateSelectedAttribute}
+              getFocusClasses={getFocusClasses}
+            />
+
+            <TemplateControls
+              config={config}
+              availableTemplates={availableTemplates}
+              selectedTemplate={selectedTemplate}
+              onTemplateChange={setSelectedTemplate}
               getFocusClasses={getFocusClasses}
             />
 

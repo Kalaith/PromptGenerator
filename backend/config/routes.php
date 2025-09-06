@@ -14,6 +14,7 @@ use AnimePromptGen\Controllers\GameAssetsController;
 use AnimePromptGen\Controllers\AnimeAttributesController;
 use AnimePromptGen\Controllers\GeneratorAttributesController;
 use AnimePromptGen\Controllers\AttributeConfigController;
+use AnimePromptGen\Controllers\AttributeCategoryController;
 use AnimePromptGen\Controllers\ImageController;
 use AnimePromptGen\Controllers\ImageQueueController;
 
@@ -61,6 +62,13 @@ return function (App $app) {
         $group->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
         $group->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
         $group->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
+        
+        // Attribute category management (generator-agnostic)
+        $group->get('/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
+        $group->get('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
+        $group->post('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
+        $group->put('/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
+        $group->delete('/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
         
         // Template routes (specific routes must come before parameterized routes)
         $group->get('/templates', [TemplateController::class, 'getAll']);
@@ -164,6 +172,13 @@ return function (App $app) {
     $app->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
     $app->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
     $app->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
+    
+    // Attribute category management (direct access)
+    $app->get('/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
+    $app->get('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
+    $app->post('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
+    $app->put('/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
+    $app->delete('/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
     
     // Health check (direct access)
     $app->get('/health', function ($request, $response) {

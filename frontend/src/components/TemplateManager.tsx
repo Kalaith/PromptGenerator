@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TemplateApi, type Template } from '../api';
 
 interface TemplateManagerProps {
-  type?: 'anime' | 'alien';
+  type?: string;
   onTemplateSelect?: (template: Template) => void;
   showCreateButton?: boolean;
 }
@@ -27,14 +27,14 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
         
         switch (filter) {
           case 'public': {
-            loadedTemplates = await TemplateApi.getPublicTemplates(type);
+            loadedTemplates = await TemplateApi.getPublicTemplates(type as 'anime' | 'alien');
             break;
           }
           case 'mine': {
             throw new Error('User authentication required to view personal templates');
           }
           default: {
-            loadedTemplates = await TemplateApi.getTemplates();
+            loadedTemplates = await TemplateApi.getTemplates({ type });
             break;
           }
         }

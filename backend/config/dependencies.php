@@ -13,7 +13,13 @@ use AnimePromptGen\Controllers\GameAssetsController;
 use AnimePromptGen\Controllers\AnimeAttributesController;
 use AnimePromptGen\Controllers\GeneratorAttributesController;
 use AnimePromptGen\Controllers\AttributeConfigController;
+use AnimePromptGen\Controllers\AttributeCategoryController;
 use AnimePromptGen\Actions\GetAnimeAttributesAction;
+use AnimePromptGen\Actions\GetAttributeCategoriesAction;
+use AnimePromptGen\Actions\GetAttributeOptionsByCategoryAction;
+use AnimePromptGen\Actions\CreateAttributeOptionAction;
+use AnimePromptGen\Actions\UpdateAttributeOptionAction;
+use AnimePromptGen\Actions\DeleteAttributeOptionAction;
 use AnimePromptGen\Actions\GetGeneratorAttributesAction;
 use AnimePromptGen\Actions\GeneratePromptsAction;
 use AnimePromptGen\Actions\GenerateAdventurerAction;
@@ -68,6 +74,11 @@ return [
     InitializeGameAttributesAction::class => \DI\autowire(),
     GetAnimeAttributesAction::class => \DI\autowire(),
     GetGeneratorAttributesAction::class => \DI\autowire(),
+    GetAttributeCategoriesAction::class => \DI\autowire(),
+    GetAttributeOptionsByCategoryAction::class => \DI\autowire(),
+    CreateAttributeOptionAction::class => \DI\autowire(),
+    UpdateAttributeOptionAction::class => \DI\autowire(),
+    DeleteAttributeOptionAction::class => \DI\autowire(),
 
     // Controllers
     PromptController::class => \DI\autowire(),
@@ -81,4 +92,5 @@ return [
     AnimeAttributesController::class => \DI\autowire(),
     GeneratorAttributesController::class => \DI\autowire(),
     AttributeConfigController::class => \DI\autowire(),
+    AttributeCategoryController::class => \DI\autowire(),
 ];

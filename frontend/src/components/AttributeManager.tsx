@@ -14,29 +14,19 @@ interface AttributeConfig {
   updated_at: string;
 }
 
-interface AttributeOption {
-  label: string;
-  value: string;
-}
-
 const AttributeManager: React.FC = () => {
   const [configs, setConfigs] = useState<AttributeConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [showAddForm, setShowAddForm] = useState<string | null>(null); // stores generator type
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [showAddSpeciesForm, setShowAddSpeciesForm] = useState<string | null>(null);
   const [newAttribute, setNewAttribute] = useState({
     category: '',
     label: '',
     input_type: 'select' as AttributeConfig['input_type'],
     sort_order: 0
   });
-
-  // State for managing attribute options
-  const [attributeOptions, setAttributeOptions] = useState<Record<string, Record<string, AttributeOption[]>>>({});
-  const [editingOptions, setEditingOptions] = useState<string | null>(null); // stores "generatorType:category"
-  const [newOptionValue, setNewOptionValue] = useState('');
-  const [newOptionLabel, setNewOptionLabel] = useState('');
 
   useEffect(() => {
     loadConfigs();
@@ -48,8 +38,6 @@ const AttributeManager: React.FC = () => {
       const response = await apiClient.get<{ success: boolean; data: AttributeConfig[] }>('/attribute-config');
       if ((response as any).success) {
         setConfigs(response.data);
-        // Load attribute options for all active configs
-        await loadAttributeOptions(response.data);
       } else {
         setError('Failed to load attribute configurations');
       }
@@ -57,30 +45,6 @@ const AttributeManager: React.FC = () => {
       setError('Error loading configurations: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadAttributeOptions = async (configsData: AttributeConfig[]) => {
-    try {
-      // Get unique generator types from active configs
-      const generatorTypes = [...new Set(configsData.filter(c => c.is_active).map(c => c.generator_type))];
-      
-      const optionsMap: Record<string, Record<string, AttributeOption[]>> = {};
-      
-      for (const generatorType of generatorTypes) {
-        try {
-          const response = await apiClient.get(`/generator-attributes/${generatorType}`);
-          if (response && (response as any).data && (response as any).data.attributes) {
-            optionsMap[generatorType] = (response as any).data.attributes;
-          }
-        } catch (err) {
-          console.warn(`Failed to load options for ${generatorType}:`, err);
-        }
-      }
-      
-      setAttributeOptions(optionsMap);
-    } catch (err) {
-      console.error('Error loading attribute options:', err);
     }
   };
 
@@ -116,123 +80,120 @@ const AttributeManager: React.FC = () => {
     await updateConfig(id, { sort_order: newOrder });
   };
 
-  const createAttribute = async (generatorType: string) => {
+  const createAttribute = async (generatorTypes: string[]) => {
     try {
-      const response = await apiClient.post('/attribute-config', {
-        generator_type: generatorType,
-        category: newAttribute.category,
-        label: newAttribute.label,
-        input_type: newAttribute.input_type,
-        sort_order: newAttribute.sort_order || Math.max(...configs.filter(c => c.generator_type === generatorType).map(c => c.sort_order)) + 10
-      });
+      const promises = generatorTypes.map(generatorType =>
+        apiClient.post('/attribute-config', {
+          generator_type: generatorType,
+          category: newAttribute.category,
+          label: newAttribute.label,
+          input_type: newAttribute.input_type,
+          sort_order: newAttribute.sort_order || 0
+        })
+      );
       
-      if ((response as any).success) {
-        await loadConfigs(); // Reload to get the new attribute
-        setShowAddForm(null);
+      const responses = await Promise.all(promises);
+      const allSuccess = responses.every(response => (response as any).success);
+      
+      if (allSuccess) {
+        await loadConfigs();
+        setShowAddForm(false);
         setNewAttribute({ category: '', label: '', input_type: 'select', sort_order: 0 });
       } else {
-        setError('Failed to create attribute');
+        setError('Failed to create some attributes');
       }
     } catch (err) {
-      setError('Error creating attribute: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setError('Error creating attributes: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
-  const deleteAttribute = async (id: number, attributeLabel: string) => {
-    if (!confirm(`Are you sure you want to delete the "${attributeLabel}" attribute? This cannot be undone.`)) {
+  const addSpeciesToAttribute = async (category: string, generatorTypes: string[]) => {
+    try {
+      const existingCategory = configs.find(c => c.category === category);
+      if (!existingCategory) {
+        setError('Category not found');
+        return;
+      }
+
+      const promises = generatorTypes.map(generatorType =>
+        apiClient.post('/attribute-config', {
+          generator_type: generatorType,
+          category: existingCategory.category,
+          label: existingCategory.label,
+          input_type: existingCategory.input_type,
+          sort_order: existingCategory.sort_order
+        })
+      );
+      
+      const responses = await Promise.all(promises);
+      const allSuccess = responses.every(response => (response as any).success);
+      
+      if (allSuccess) {
+        await loadConfigs();
+        setShowAddSpeciesForm(null);
+      } else {
+        setError('Failed to add some species assignments');
+      }
+    } catch (err) {
+      setError('Error adding species: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const removeSpeciesFromAttribute = async (configId: number, speciesName: string, category: string) => {
+    if (!confirm(`Are you sure you want to remove "${speciesName}" from the "${category}" attribute? This cannot be undone.`)) {
       return;
     }
 
     try {
-      const response = await apiClient.delete(`/attribute-config/${id}`);
+      const response = await apiClient.delete(`/attribute-config/${configId}`);
       if ((response as any).success) {
-        setConfigs(configs.filter(config => config.id !== id));
+        setConfigs(configs.filter(config => config.id !== configId));
       } else {
-        setError('Failed to delete attribute');
+        setError('Failed to remove species from attribute');
+      }
+    } catch (err) {
+      setError('Error removing species: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const deleteAttribute = async (category: string) => {
+    if (!confirm(`Are you sure you want to delete the "${category}" attribute from all species? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const categoryConfigs = configs.filter(c => c.category === category);
+      const promises = categoryConfigs.map(config =>
+        apiClient.delete(`/attribute-config/${config.id}`)
+      );
+      
+      const responses = await Promise.all(promises);
+      const allSuccess = responses.every(response => (response as any).success);
+      
+      if (allSuccess) {
+        setConfigs(configs.filter(config => config.category !== category));
+      } else {
+        setError('Failed to delete some attribute instances');
       }
     } catch (err) {
       setError('Error deleting attribute: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
-  // Functions for managing attribute options
-  const addAttributeOption = async (generatorType: string, category: string) => {
-    if (!newOptionValue.trim()) {
-      setError('Option value is required');
-      return;
+  const availableGeneratorTypes = getGeneratorTypes(true);
+
+  // Group configs by category for display
+  const attributeGroups = configs.reduce((groups, config) => {
+    if (!groups[config.category]) {
+      groups[config.category] = [];
     }
-
-    try {
-      const response = await apiClient.post(`/generator-attributes/${generatorType}/${category}/options`, {
-        value: newOptionValue.trim(),
-        label: newOptionLabel.trim() || newOptionValue.trim()
-      });
-
-      if ((response as any).success) {
-        // Reload options for this generator type
-        const updatedOptionsResponse = await apiClient.get(`/generator-attributes/${generatorType}`);
-        if (updatedOptionsResponse && (updatedOptionsResponse as any).data && (updatedOptionsResponse as any).data.attributes) {
-          setAttributeOptions(prev => ({
-            ...prev,
-            [generatorType]: (updatedOptionsResponse as any).data.attributes
-          }));
-        }
-        
-        setNewOptionValue('');
-        setNewOptionLabel('');
-      } else {
-        setError('Failed to add attribute option');
-      }
-    } catch (err) {
-      setError('Error adding attribute option: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    }
-  };
-
-  const deleteAttributeOption = async (generatorType: string, category: string, value: string) => {
-    if (!confirm(`Are you sure you want to delete the option "${value}" from ${category}?`)) {
-      return;
-    }
-
-    try {
-      const response = await apiClient.delete(`/generator-attributes/${generatorType}/${category}/options/${encodeURIComponent(value)}`);
-      
-      if ((response as any).success) {
-        // Update local state
-        setAttributeOptions(prev => ({
-          ...prev,
-          [generatorType]: {
-            ...prev[generatorType],
-            [category]: {
-              ...prev[generatorType][category],
-              options: prev[generatorType][category]?.options?.filter(opt => opt.value !== value) || []
-            }
-          }
-        }));
-      } else {
-        setError('Failed to delete attribute option');
-      }
-    } catch (err) {
-      setError('Error deleting attribute option: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    }
-  };
-
-  // Get available generator types from the unified config
-  const availableGeneratorTypes = getGeneratorTypes(true); // include inactive types
-
-  const groupedConfigs = configs.reduce((groups, config) => {
-    const type = config.generator_type;
-    if (!groups[type]) {
-      groups[type] = [];
-    }
-    groups[type].push(config);
+    groups[config.category].push(config);
     return groups;
   }, {} as Record<string, AttributeConfig[]>);
 
-  // Ensure all generator types have entries, even if empty
-  availableGeneratorTypes.forEach(generatorType => {
-    if (!groupedConfigs[generatorType.apiType]) {
-      groupedConfigs[generatorType.apiType] = [];
-    }
+  // Sort each group by ID for consistent ordering
+  Object.keys(attributeGroups).forEach(category => {
+    attributeGroups[category].sort((a, b) => a.id - b.id);
   });
 
   if (loading) {
@@ -256,7 +217,7 @@ const AttributeManager: React.FC = () => {
           <h1 className="text-4xl font-heading font-bold bg-gradient-sunset bg-clip-text text-transparent mb-4">
             ⚙️ Attribute Configuration Manager
           </h1>
-          <p className="text-dark-600 text-lg">Customize generator attributes and options</p>
+          <p className="text-dark-600 text-lg">Define global attributes that can be used across generator types</p>
         </div>
         
         {/* Error display */}
@@ -275,332 +236,340 @@ const AttributeManager: React.FC = () => {
           </div>
         )}
 
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <h2 className="font-semibold text-blue-900 mb-2">How to Use:</h2>
-        <ul className="text-sm text-blue-800 list-disc list-inside space-y-1">
-          <li><strong>Toggle Active:</strong> Enable/disable attributes for each generator</li>
-          <li><strong>Edit Labels:</strong> Click on a label to rename it</li>
-          <li><strong>Change Input Type:</strong> Select dropdown, multi-select, text, etc.</li>
-          <li><strong>Sort Order:</strong> Lower numbers appear first in the interface</li>
-        </ul>
-      </div>
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
+          <h2 className="font-semibold text-blue-900 mb-2">How to Use:</h2>
+          <ul className="text-sm text-blue-800 list-disc list-inside space-y-1">
+            <li><strong>Global Attributes:</strong> Define attributes that can be used across all generator types</li>
+            <li><strong>Species Assignment:</strong> Enable/disable attributes for specific generator types</li>
+            <li><strong>Input Types:</strong> Choose how users will input values (select, text, etc.)</li>
+            <li><strong>Manage Values:</strong> Use <a href="/attribute-options" className="text-blue-600 underline">Attribute Options</a> to add option values for select fields</li>
+          </ul>
+        </div>
 
-      {Object.entries(groupedConfigs).map(([generatorType, typeConfigs]) => {
-        // Find the generator type config for display info
-        const generatorTypeConfig = availableGeneratorTypes.find(gt => gt.apiType === generatorType);
-        const displayName = generatorTypeConfig ? generatorTypeConfig.name : generatorType;
-        const displayIcon = generatorTypeConfig ? generatorTypeConfig.icon : '🔧';
-        const isActive = generatorTypeConfig ? generatorTypeConfig.isActive : false;
-        
-        return (
-        <div key={generatorType} className={`mb-8 ${!isActive ? 'opacity-60' : ''}`}>
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{displayIcon}</span>
-              <div>
-                <h2 className={`text-2xl font-semibold p-3 rounded border ${
-                  isActive 
-                    ? 'bg-blue-100 text-blue-900 border-blue-200' 
-                    : 'bg-gray-100 text-gray-600 border-gray-200'
-                }`}>
-                  {displayName} Generator Attributes ({typeConfigs.length})
-                </h2>
-                {!isActive && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    ⚠️ This generator type is inactive. Enable it in Generator Type Manager to use these attributes.
-                  </p>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  API Type: <code className="bg-gray-100 px-1 rounded">{generatorType}</code>
-                </p>
-              </div>
-            </div>
+        {/* All Attributes Table */}
+        <div className="bg-white rounded-lg shadow border overflow-hidden">
+          <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-900">All Attributes ({Object.keys(attributeGroups).length})</h2>
             <button
-              onClick={() => setShowAddForm(generatorType)}
+              onClick={() => setShowAddForm(true)}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
             >
               ➕ Add Attribute
             </button>
           </div>
-          
+
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+            <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left">Active</th>
-                  <th className="px-4 py-2 text-left">Category</th>
-                  <th className="px-4 py-2 text-left">Label</th>
-                  <th className="px-4 py-2 text-left">Input Type</th>
-                  <th className="px-4 py-2 text-left">Sort Order</th>
-                  <th className="px-4 py-2 text-left">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attribute</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Input Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Used By Species</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sort Order</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {typeConfigs
-                  .sort((a, b) => a.sort_order - b.sort_order)
-                  .map((config) => (
-                  <tr key={config.id} className={`border-t ${!config.is_active ? 'bg-gray-50 opacity-60' : ''}`}>
-                    <td className="px-4 py-2">
-                      <button
-                        onClick={() => toggleActive(config.id, config.is_active)}
-                        className={`px-3 py-1 rounded text-sm font-medium ${
-                          config.is_active 
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                        }`}
-                      >
-                        {config.is_active ? 'Active' : 'Inactive'}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2 font-mono text-sm text-gray-600">
-                      {config.category}
-                    </td>
-                    <td className="px-4 py-2">
-                      {editingId === config.id ? (
-                        <input
-                          type="text"
-                          defaultValue={config.label}
-                          onBlur={(e) => updateLabel(config.id, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              updateLabel(config.id, (e.target as HTMLInputElement).value);
-                            } else if (e.key === 'Escape') {
-                              setEditingId(null);
-                            }
-                          }}
-                          className="border border-gray-300 rounded px-2 py-1 w-full"
-                          autoFocus
-                        />
-                      ) : (
-                        <button
-                          onClick={() => setEditingId(config.id)}
-                          className="text-left hover:bg-gray-100 px-2 py-1 rounded w-full"
-                        >
-                          {config.label}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <select
-                        value={config.input_type}
-                        onChange={(e) => updateInputType(config.id, e.target.value as AttributeConfig['input_type'])}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm"
-                      >
-                        <option value="select">Select</option>
-                        <option value="multi-select">Multi-Select</option>
-                        <option value="text">Text</option>
-                        <option value="number">Number</option>
-                        <option value="checkbox">Checkbox</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        value={config.sort_order}
-                        onChange={(e) => updateSortOrder(config.id, parseInt(e.target.value) || 0)}
-                        className="border border-gray-300 rounded px-2 py-1 w-20 text-sm"
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-gray-500">
-                          ID: {config.id}
+              <tbody className="bg-white divide-y divide-gray-200">
+                {Object.entries(attributeGroups).map(([category, categoryConfigs]) => {
+                  const uniqueAttribute = categoryConfigs[0]; // All should have same core info
+                  // Use the most common sort order, or the first one if they're all different
+                  const sortOrders = categoryConfigs.map(c => c.sort_order);
+                  const mostCommonSortOrder = sortOrders.reduce((a, b, i, arr) => 
+                    arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b
+                  );
+                  
+                  const usedBySpecies = categoryConfigs.map(config => {
+                    const generatorTypeConfig = availableGeneratorTypes.find(gt => gt.apiType === config.generator_type);
+                    return {
+                      ...config,
+                      displayName: generatorTypeConfig?.name || config.generator_type,
+                      icon: generatorTypeConfig?.icon || '🔧',
+                      isTypeActive: generatorTypeConfig?.isActive || false
+                    };
+                  });
+                  
+                  return (
+                    <tr key={category} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div>
+                          {editingId === uniqueAttribute.id ? (
+                            <input
+                              type="text"
+                              defaultValue={uniqueAttribute.label}
+                              onBlur={(e) => {
+                                const newLabel = e.target.value;
+                                categoryConfigs.forEach(config => {
+                                  updateLabel(config.id, newLabel);
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const newLabel = (e.target as HTMLInputElement).value;
+                                  categoryConfigs.forEach(config => {
+                                    updateLabel(config.id, newLabel);
+                                  });
+                                } else if (e.key === 'Escape') {
+                                  setEditingId(null);
+                                }
+                              }}
+                              className="border border-gray-300 rounded px-2 py-1 w-full font-semibold"
+                              autoFocus
+                            />
+                          ) : (
+                            <button
+                              onClick={() => setEditingId(uniqueAttribute.id)}
+                              className="text-left hover:text-blue-600 font-semibold text-gray-900"
+                            >
+                              {uniqueAttribute.label}
+                            </button>
+                          )}
+                          <div className="text-sm text-gray-500 font-mono">{category}</div>
                         </div>
-                        {config.is_active && config.input_type === 'select' && (
-                          <button
-                            onClick={() => setEditingOptions(`${generatorType}:${config.category}`)}
-                            className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 flex items-center gap-1"
-                            title="Manage options for this attribute"
-                          >
-                            ⚙️ Options
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteAttribute(config.id, config.label)}
-                          className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 flex items-center gap-1"
-                          title="Delete this attribute"
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={uniqueAttribute.input_type}
+                          onChange={(e) => {
+                            const newType = e.target.value as AttributeConfig['input_type'];
+                            categoryConfigs.forEach(config => {
+                              updateInputType(config.id, newType);
+                            });
+                          }}
+                          className="border border-gray-300 rounded px-2 py-1 text-sm"
                         >
-                          🗑️ Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <option value="select">Select</option>
+                          <option value="multi-select">Multi-Select</option>
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="checkbox">Checkbox</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {usedBySpecies.map((speciesConfig) => (
+                            <div key={speciesConfig.id} className="inline-flex items-center gap-1 bg-white rounded-lg border">
+                              <button
+                                onClick={() => toggleActive(speciesConfig.id, speciesConfig.is_active)}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-l-lg text-xs font-medium ${
+                                  speciesConfig.is_active
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                } ${!speciesConfig.isTypeActive ? 'opacity-50' : ''}`}
+                                title={`${speciesConfig.is_active ? 'Disable' : 'Enable'} for ${speciesConfig.displayName}`}
+                              >
+                                <span>{speciesConfig.icon}</span>
+                                <span>{speciesConfig.displayName}</span>
+                                {speciesConfig.is_active ? '✓' : '✗'}
+                              </button>
+                              {usedBySpecies.length > 1 && (
+                                <button
+                                  onClick={() => removeSpeciesFromAttribute(speciesConfig.id, speciesConfig.displayName, category)}
+                                  className="px-1 py-1 text-red-600 hover:bg-red-100 rounded-r-lg text-xs"
+                                  title={`Remove ${speciesConfig.displayName} from this attribute`}
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <input
+                          type="number"
+                          value={mostCommonSortOrder}
+                          onChange={(e) => {
+                            const newOrder = parseInt(e.target.value) || 0;
+                            categoryConfigs.forEach(config => {
+                              updateSortOrder(config.id, newOrder);
+                            });
+                          }}
+                          className="border border-gray-300 rounded px-2 py-1 w-16 text-sm"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(uniqueAttribute.input_type === 'select' || uniqueAttribute.input_type === 'multi-select') && (
+                            <a
+                              href="/attribute-options"
+                              className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+                              title="Manage options"
+                            >
+                              🎯 Options
+                            </a>
+                          )}
+                          <button
+                            onClick={() => setShowAddSpeciesForm(category)}
+                            className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                            title="Add more species to this attribute"
+                          >
+                            ➕ Add Species
+                          </button>
+                          <button
+                            onClick={() => deleteAttribute(category)}
+                            className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                            title="Delete attribute from all species"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-
-          {/* Add Attribute Form */}
-          {showAddForm === generatorType && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <span>{displayIcon}</span>
-                Add New Attribute to {displayName} Generator
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Category *</label>
-                  <input
-                    type="text"
-                    value={newAttribute.category}
-                    onChange={(e) => setNewAttribute(prev => ({ ...prev, category: e.target.value }))}
-                    placeholder="e.g., hair_colors"
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  />
-                  <div className="text-xs text-gray-500 mt-1">Internal name (use underscores)</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Display Label *</label>
-                  <input
-                    type="text"
-                    value={newAttribute.label}
-                    onChange={(e) => setNewAttribute(prev => ({ ...prev, label: e.target.value }))}
-                    placeholder="e.g., Hair Color"
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  />
-                  <div className="text-xs text-gray-500 mt-1">User-friendly name</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Input Type</label>
-                  <select
-                    value={newAttribute.input_type}
-                    onChange={(e) => setNewAttribute(prev => ({ ...prev, input_type: e.target.value as AttributeConfig['input_type'] }))}
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  >
-                    <option value="select">Select</option>
-                    <option value="multi-select">Multi-Select</option>
-                    <option value="text">Text</option>
-                    <option value="number">Number</option>
-                    <option value="checkbox">Checkbox</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Sort Order</label>
-                  <input
-                    type="number"
-                    value={newAttribute.sort_order}
-                    onChange={(e) => setNewAttribute(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  />
-                  <div className="text-xs text-gray-500 mt-1">0 = auto-assign</div>
-                </div>
-              </div>
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => createAttribute(generatorType)}
-                  disabled={!newAttribute.category || !newAttribute.label}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  ✅ Create Attribute
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddForm(null);
-                    setNewAttribute({ category: '', label: '', input_type: 'select', sort_order: 0 });
-                  }}
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                >
-                  ❌ Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Attribute Options Management */}
-          {editingOptions === `${generatorType}:${editingOptions?.split(':')[1]}` && editingOptions.startsWith(`${generatorType}:`) && (
-            <div className="mt-6 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <span>🎯</span>
-                  Manage Options for "{editingOptions.split(':')[1]}"
-                </h3>
-                <button
-                  onClick={() => setEditingOptions(null)}
-                  className="text-gray-500 hover:text-gray-700 text-xl font-bold"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Current Options */}
-              <div className="mb-6">
-                <h4 className="font-medium mb-3 text-gray-700">Current Options:</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {(attributeOptions[generatorType]?.[editingOptions.split(':')[1]]?.options || []).map((option, index) => (
-                    <div key={`${option.value}-${index}`} className="flex items-center justify-between bg-white border rounded p-2">
-                      <div className="flex-1">
-                        <span className="font-medium text-sm">{option.label || option.value}</span>
-                        {option.label && option.label !== option.value && (
-                          <div className="text-xs text-gray-500">Value: {option.value}</div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => deleteAttributeOption(generatorType, editingOptions.split(':')[1], option.value)}
-                        className="text-red-600 hover:text-red-800 ml-2 text-sm"
-                        title="Delete this option"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                {(attributeOptions[generatorType]?.[editingOptions.split(':')[1]]?.options || []).length === 0 && (
-                  <div className="text-gray-500 italic text-sm">No options defined yet. Add some below!</div>
-                )}
-              </div>
-
-              {/* Add New Option */}
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-3 text-gray-700">Add New Option:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Value *</label>
-                    <input
-                      type="text"
-                      value={newOptionValue}
-                      onChange={(e) => setNewOptionValue(e.target.value)}
-                      placeholder="e.g., large_floppy_ears"
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    />
-                    <div className="text-xs text-gray-500 mt-1">Internal value (use underscores)</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Display Label</label>
-                    <input
-                      type="text"
-                      value={newOptionLabel}
-                      onChange={(e) => setNewOptionLabel(e.target.value)}
-                      placeholder="e.g., Large Floppy Ears"
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    />
-                    <div className="text-xs text-gray-500 mt-1">User-friendly name (optional)</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => addAttributeOption(generatorType, editingOptions.split(':')[1])}
-                      disabled={!newOptionValue.trim()}
-                      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm flex items-center gap-2"
-                    >
-                      ➕ Add Option
-                    </button>
-                    <button
-                      onClick={() => {
-                        setNewOptionValue('');
-                        setNewOptionLabel('');
-                      }}
-                      className="bg-gray-400 text-white px-3 py-2 rounded hover:bg-gray-500 text-sm"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-      )
-      })}
-      
+
+        {/* Add Species to Existing Attribute Form */}
+        {showAddSpeciesForm && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="font-semibold mb-4 text-lg">Add Species to "{showAddSpeciesForm}" Attribute</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Select Species to Add:</label>
+              <div className="flex flex-wrap gap-2">
+                {availableGeneratorTypes
+                  .filter(generatorType => {
+                    // Only show species that don't already have this attribute
+                    const existingForCategory = configs.filter(c => c.category === showAddSpeciesForm);
+                    return !existingForCategory.some(config => config.generator_type === generatorType.apiType);
+                  })
+                  .map(generatorType => (
+                    <label key={generatorType.apiType} className="flex items-center gap-2 bg-white rounded px-3 py-2 border">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        data-generator-type={generatorType.apiType}
+                      />
+                      <span>{generatorType.icon}</span>
+                      <span>{generatorType.name}</span>
+                    </label>
+                  ))}
+              </div>
+              {availableGeneratorTypes.filter(generatorType => {
+                const existingForCategory = configs.filter(c => c.category === showAddSpeciesForm);
+                return !existingForCategory.some(config => config.generator_type === generatorType.apiType);
+              }).length === 0 && (
+                <p className="text-gray-500 italic mt-2">All available species already have this attribute assigned.</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const checkboxes = document.querySelectorAll('[data-generator-type]') as NodeListOf<HTMLInputElement>;
+                  const selectedTypes = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.dataset.generatorType!);
+                  
+                  if (selectedTypes.length > 0) {
+                    addSpeciesToAttribute(showAddSpeciesForm, selectedTypes);
+                  }
+                }}
+                className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
+              >
+                ✅ Add Selected Species
+              </button>
+              <button
+                onClick={() => setShowAddSpeciesForm(null)}
+                className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
+              >
+                ❌ Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Add Attribute Form */}
+        {showAddForm && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h3 className="font-semibold mb-4 text-lg">Add New Global Attribute</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Category *</label>
+                <input
+                  type="text"
+                  value={newAttribute.category}
+                  onChange={(e) => setNewAttribute(prev => ({ ...prev, category: e.target.value }))}
+                  placeholder="hair_color"
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                />
+                <div className="text-xs text-gray-500 mt-1">Internal name (use underscores)</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Display Label *</label>
+                <input
+                  type="text"
+                  value={newAttribute.label}
+                  onChange={(e) => setNewAttribute(prev => ({ ...prev, label: e.target.value }))}
+                  placeholder="Hair Color"
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                />
+                <div className="text-xs text-gray-500 mt-1">User-friendly name</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Input Type</label>
+                <select
+                  value={newAttribute.input_type}
+                  onChange={(e) => setNewAttribute(prev => ({ ...prev, input_type: e.target.value as AttributeConfig['input_type'] }))}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                >
+                  <option value="select">Select</option>
+                  <option value="multi-select">Multi-Select</option>
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="checkbox">Checkbox</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-2">Add to Species:</label>
+              <div className="flex flex-wrap gap-2">
+                {availableGeneratorTypes.map(generatorType => (
+                  <label key={generatorType.apiType} className="flex items-center gap-2 bg-white rounded px-3 py-2 border">
+                    <input
+                      type="checkbox"
+                      defaultChecked
+                      className="rounded"
+                      data-generator-type={generatorType.apiType}
+                    />
+                    <span>{generatorType.icon}</span>
+                    <span>{generatorType.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  const checkboxes = document.querySelectorAll('[data-generator-type]') as NodeListOf<HTMLInputElement>;
+                  const selectedTypes = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.dataset.generatorType!);
+                  
+                  createAttribute(selectedTypes);
+                }}
+                disabled={!newAttribute.category || !newAttribute.label}
+                className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600 disabled:bg-gray-400"
+              >
+                ✅ Create Attribute
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewAttribute({ category: '', label: '', input_type: 'select', sort_order: 0 });
+                }}
+                className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
+              >
+                ❌ Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* Footer */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -618,7 +587,7 @@ const AttributeManager: React.FC = () => {
               </button>
             </div>
             <div className="bg-gradient-sunset bg-clip-text text-transparent font-bold text-lg">
-              Total Configurations: {configs.length}
+              Total Attributes: {Object.keys(attributeGroups).length}
             </div>
           </div>
         </div>

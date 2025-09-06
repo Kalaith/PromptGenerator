@@ -96,21 +96,16 @@ class ApiClient {
     });
   }
 
-  // PUT and DELETE methods removed to avoid preflight - use POST instead
   async put<T>(endpoint: string, data?: any): Promise<T> {
-    // Convert PUT to POST with _method parameter to avoid preflight
-    const putData = { ...data, _method: 'PUT' };
     return this.request<T>(endpoint, {
-      method: 'POST',
-      body: putData ? JSON.stringify(putData) : null,
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : null,
     });
   }
 
   async delete<T>(endpoint: string): Promise<T> {
-    // Convert DELETE to POST with _method parameter to avoid preflight
     return this.request<T>(endpoint, { 
-      method: 'POST',
-      body: JSON.stringify({ _method: 'DELETE' })
+      method: 'DELETE'
     });
   }
 }

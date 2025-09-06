@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { PromptApi } from '../api/promptApi';
 import { ImageApi } from '../api/imageApi';
+import { TemplateApi } from '../api/templateApi';
 import { apiClient } from '../api/client';
-import type { GeneratePromptsRequest } from '../api/types';
+import type { GeneratePromptsRequest, Template } from '../api/types';
 import type { DescriptionTemplate } from '../api/descriptionTemplateApi';
 import { usePromptGeneration } from './usePromptGeneration';
 import { useSession } from './useSession';
@@ -29,8 +30,8 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
   const [promptCount, setPromptCount] = useState<number>(APP_CONSTANTS.PROMPT_COUNT.DEFAULT);
   const [species, setSpecies] = useState<string>('random');
   const [availableSpecies, setAvailableSpecies] = useState<string[]>([]);
-  const [availableTemplates, setAvailableTemplates] = useState<DescriptionTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<DescriptionTemplate | null>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [attributeConfigs, setAttributeConfigs] = useState<AttributeConfig[]>([]);
   const [attributeOptions, setAttributeOptions] = useState<Record<string, Array<{label: string, value: string}>>>({});
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
@@ -53,14 +54,28 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
           generatorType: config.apiType 
         });
 
-        const [speciesResponse, attributeConfigResponse] = await Promise.all([
+        const [speciesResponse, attributeConfigResponse, templatesResponse] = await Promise.all([
           PromptApi.getSpecies(),
-          apiClient.get<{ success: boolean; data: AttributeConfig[] }>('/attribute-config')
+          apiClient.get<{ success: boolean; data: AttributeConfig[] }>('/attribute-config'),
+          TemplateApi.getPublicTemplates(config.apiType as 'anime' | 'alien').catch(error => {
+            logger.warn('Failed to load templates', { 
+              component: 'useUnifiedGenerator',
+              error: error instanceof Error ? error.message : 'Unknown error' 
+            });
+            return [];
+          })
         ]);
         
         if (speciesResponse.success) {
           setAvailableSpecies(speciesResponse.data.species.map(s => s.name));
         }
+        
+        // Set available templates
+        setAvailableTemplates(templatesResponse);
+        logger.debug('Loaded templates', { 
+          component: 'useUnifiedGenerator',
+          templateCount: templatesResponse.length 
+        });
         
         // Filter attribute configs for this generator type
         if (attributeConfigResponse.success) {

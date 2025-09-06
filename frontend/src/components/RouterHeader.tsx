@@ -20,7 +20,8 @@ const RouterHeader: React.FC = () => {
     { path: '/gallery', label: 'Gallery', icon: '🖼️' },
     { path: '/templates', label: 'Templates', icon: '📝' },
     { path: '/description-templates', label: 'Description Templates', icon: '📖' },
-    { path: '/attribute-manager', label: 'Manage Attributes', icon: '⚙️' },
+    { path: '/attribute-manager', label: 'Attributes', icon: '⚙️' },
+    { path: '/attribute-options', label: 'Attribute Options', icon: '🎯' },
     { path: '/generator-types', label: 'Generator Types', icon: '🔧' },
   ];
 
@@ -57,10 +58,7 @@ const RouterHeader: React.FC = () => {
                 `}
               >
                 <span className="text-lg">{icon}</span>
-                <span className="hidden sm:inline font-medium">{label}</span>
-                <span className="sm:hidden font-medium">
-                  {label.split(' ')[0]}
-                </span>
+                <span className="font-medium">{label}</span>
                 
                 {/* Active indicator */}
                 {isActive(path) && (

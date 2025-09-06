@@ -51,7 +51,10 @@ $app->add(function ($request, $handler) {
         ->withHeader('Access-Control-Allow-Credentials', 'true');
 });
 
-// OPTIONS requests disabled - will return 404 for preflight requests
+// Handle preflight OPTIONS requests
+$app->options('/{routes:.+}', function ($request, $response) {
+    return $response;
+});
 
 // Load routes
 (require __DIR__ . '/../config/routes.php')($app);

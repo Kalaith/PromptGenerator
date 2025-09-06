@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getGeneratorTypes, GeneratorTypeConfig } from '../config/generatorTypes';
 import TemplateManager from '../components/TemplateManager';
 import TemplateCreator from '../components/TemplateCreator';
 
 const TemplatesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'browse' | 'create'>('browse');
+  const [availableGeneratorTypes, setAvailableGeneratorTypes] = useState<GeneratorTypeConfig[]>([]);
+
+  useEffect(() => {
+    // Load all active generator types
+    const generatorTypes = getGeneratorTypes(true); // Only active ones
+    setAvailableGeneratorTypes(generatorTypes);
+  }, []);
 
   return (
     <div className="container mx-auto p-6">
@@ -36,22 +44,31 @@ const TemplatesPage: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {activeTab === 'browse' && (
           <>
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Anime Templates</h2>
-              <TemplateManager type="anime" showCreateButton={false} />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Alien Templates</h2>
-              <TemplateManager type="alien" showCreateButton={false} />
-            </div>
+            {availableGeneratorTypes.map(generatorType => (
+              <div key={generatorType.id}>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <span className="text-2xl">{generatorType.icon}</span>
+                  {generatorType.name} Templates
+                </h2>
+                <TemplateManager 
+                  type={generatorType.apiType} 
+                  showCreateButton={false} 
+                />
+              </div>
+            ))}
+            {availableGeneratorTypes.length === 0 && (
+              <div className="lg:col-span-2 xl:col-span-3 text-center py-8 text-gray-500">
+                <p>No generator types available for templates.</p>
+              </div>
+            )}
           </>
         )}
         
         {activeTab === 'create' && (
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 xl:col-span-3">
             <TemplateCreator />
           </div>
         )}

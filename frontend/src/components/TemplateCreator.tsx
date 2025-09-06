@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TemplateApi, type CreateTemplateRequest } from '../api';
+import { getGeneratorTypes, GeneratorTypeConfig } from '../config/generatorTypes';
 
 const TemplateCreator: React.FC = () => {
+  const [availableGeneratorTypes, setAvailableGeneratorTypes] = useState<GeneratorTypeConfig[]>([]);
   const [formData, setFormData] = useState<CreateTemplateRequest>({
     name: '',
     description: '',
-    type: 'anime',
+    type: 'anime', // Will be updated when generator types load
     template_data: {},
     is_public: false,
     created_by: 'user',
@@ -15,6 +17,20 @@ const TemplateCreator: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load all active generator types
+    const generatorTypes = getGeneratorTypes(true);
+    setAvailableGeneratorTypes(generatorTypes);
+    
+    // Set default type to first available generator type
+    if (generatorTypes.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        type: generatorTypes[0].apiType
+      }));
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -33,7 +49,7 @@ const TemplateCreator: React.FC = () => {
       setFormData({
         name: '',
         description: '',
-        type: 'anime',
+        type: availableGeneratorTypes.length > 0 ? availableGeneratorTypes[0].apiType : 'anime',
         template_data: {},
         is_public: false,
         created_by: 'user',
@@ -100,11 +116,17 @@ const TemplateCreator: React.FC = () => {
             <label className="block text-sm font-medium mb-1">Type *</label>
             <select
               className="w-full p-2 border border-gray-300 rounded-md"
-              onChange={(event) => updateFormData('type', event.target.value as 'anime' | 'alien')}
+              onChange={(event) => updateFormData('type', event.target.value)}
               value={formData.type}
             >
-              <option value="anime">Anime</option>
-              <option value="alien">Alien</option>
+              {availableGeneratorTypes.map(generatorType => (
+                <option key={generatorType.id} value={generatorType.apiType}>
+                  {generatorType.icon} {generatorType.name}
+                </option>
+              ))}
+              {availableGeneratorTypes.length === 0 && (
+                <option value="" disabled>No generator types available</option>
+              )}
             </select>
           </div>
 
