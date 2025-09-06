@@ -17,6 +17,7 @@ const RouterHeader: React.FC = () => {
       icon: type.icon
     })),
     // Static admin pages
+    { path: '/gallery', label: 'Gallery', icon: '🖼️' },
     { path: '/templates', label: 'Templates', icon: '📝' },
     { path: '/description-templates', label: 'Description Templates', icon: '📖' },
     { path: '/attribute-manager', label: 'Manage Attributes', icon: '⚙️' },

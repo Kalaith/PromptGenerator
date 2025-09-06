@@ -181,7 +181,7 @@ class ImageGenerationQueue extends Model
     public function markAsProcessing(): bool
     {
         $this->status = self::STATUS_PROCESSING;
-        $this->processing_started_at = now();
+        $this->processing_started_at = new \DateTime();
         $this->attempts++;
         
         return $this->save();
@@ -193,7 +193,7 @@ class ImageGenerationQueue extends Model
     public function markAsCompleted(): bool
     {
         $this->status = self::STATUS_COMPLETED;
-        $this->processing_completed_at = now();
+        $this->processing_completed_at = new \DateTime();
         $this->error_message = null;
         
         return $this->save();
@@ -205,7 +205,7 @@ class ImageGenerationQueue extends Model
     public function markAsFailed(string $errorMessage): bool
     {
         $this->status = self::STATUS_FAILED;
-        $this->processing_completed_at = now();
+        $this->processing_completed_at = new \DateTime();
         $this->error_message = $errorMessage;
         
         return $this->save();
@@ -217,7 +217,7 @@ class ImageGenerationQueue extends Model
     public function markAsCancelled(): bool
     {
         $this->status = self::STATUS_CANCELLED;
-        $this->processing_completed_at = now();
+        $this->processing_completed_at = new \DateTime();
         
         return $this->save();
     }
@@ -263,7 +263,7 @@ class ImageGenerationQueue extends Model
             ->where('created_at', '<', $this->created_at)
             ->count();
 
-        return now()->addSeconds($avgProcessingTime * ($queuePosition + 1));
+        return (new \DateTime())->add(new \DateInterval("PT{$avgProcessingTime}S"))->add(new \DateInterval("PT" . ($avgProcessingTime * $queuePosition) . "S"));
     }
 
     /**

@@ -7,6 +7,7 @@ import TemplatesPage from './pages/TemplatesPage';
 import DescriptionTemplatesPage from './pages/DescriptionTemplatesPage';
 import AttributeManagerPage from './pages/AttributeManagerPage';
 import GeneratorTypeManagerPage from './pages/GeneratorTypeManagerPage';
+import { GalleryPage } from './pages/GalleryPage';
 
 const App: React.FC = () => {
   return (
@@ -30,6 +31,7 @@ const App: React.FC = () => {
             <Route path="/description-templates" element={<DescriptionTemplatesPage />} />
             <Route path="/attribute-manager" element={<AttributeManagerPage />} />
             <Route path="/generator-types" element={<GeneratorTypeManagerPage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
             {/* Dynamic generator routes - handles any generator type */}
             <Route path="/:type" element={<UnifiedGeneratorPage />} />
             <Route path="*" element={<Navigate to="/kemonomimi" replace />} />

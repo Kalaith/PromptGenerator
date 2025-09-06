@@ -5,6 +5,7 @@ import { GeneratorHeader } from './generator/GeneratorHeader';
 import { BasicControls } from './generator/BasicControls';
 import { AttributeControls } from './generator/AttributeControls';
 import { GenerateButton } from './generator/GenerateButton';
+import { ImageGenerationControls } from './generator/ImageGenerationControls';
 import { ErrorDisplay } from './ui/ErrorDisplay';
 
 interface UnifiedGeneratorPanelProps {
@@ -19,9 +20,15 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
     attributeConfigs,
     attributeOptions,
     selectedAttributes,
+    imageGenerationEnabled,
+    imageWidth,
+    imageHeight,
     setPromptCount,
     setSpecies,
     updateSelectedAttribute,
+    setImageGenerationEnabled,
+    setImageWidth,
+    setImageHeight,
     handleGenerate,
     loading,
     error,
@@ -83,6 +90,15 @@ const UnifiedGeneratorPanel: React.FC<UnifiedGeneratorPanelProps> = ({ config })
               selectedAttributes={selectedAttributes}
               onAttributeChange={updateSelectedAttribute}
               getFocusClasses={getFocusClasses}
+            />
+
+            <ImageGenerationControls
+              enabled={imageGenerationEnabled}
+              onToggle={setImageGenerationEnabled}
+              width={imageWidth}
+              height={imageHeight}
+              onWidthChange={setImageWidth}
+              onHeightChange={setImageHeight}
             />
 
             <GenerateButton

@@ -3,3 +3,7 @@ mcp
 .env
 mcp-config.json
 frontend/.env.development
+service/.env.preview
+service/logs/service.log
+.gitignore
+service/logs/service.pid

@@ -427,7 +427,8 @@ final class ImageController
         return match ($extension) {
             'jpg', 'jpeg' => GeneratedImage::FORMAT_JPG,
             'webp' => GeneratedImage::FORMAT_WEBP,
-            'png', default => GeneratedImage::FORMAT_PNG
+            'png' => GeneratedImage::FORMAT_PNG,
+            default => GeneratedImage::FORMAT_PNG
         };
     }
     
@@ -439,7 +440,8 @@ final class ImageController
         return match ($format) {
             GeneratedImage::FORMAT_JPG => 'image/jpeg',
             GeneratedImage::FORMAT_WEBP => 'image/webp',
-            GeneratedImage::FORMAT_PNG, default => 'image/png'
+            GeneratedImage::FORMAT_PNG => 'image/png',
+            default => 'image/png'
         };
     }
 }

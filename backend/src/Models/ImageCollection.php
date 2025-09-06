@@ -121,7 +121,7 @@ class ImageCollection extends Model
 
         $this->images()->attach($image->id, [
             'sort_order' => $sortOrder,
-            'added_at' => now()
+            'added_at' => new \DateTime()
         ]);
 
         // Set as cover image if it's the first image

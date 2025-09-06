@@ -40,6 +40,6 @@ final class Prompt extends Model
 
     public function scopeRecent($query, int $days = 30)
     {
-        return $query->where('created_at', '>=', now()->subDays($days));
+        return $query->where('created_at', '>=', (new \DateTime())->sub(new \DateInterval("P{$days}D")));
     }
 }

@@ -19,7 +19,10 @@ param(
     [switch]$TestMode,
     
     [Parameter(Mandatory=$false)]
-    [switch]$Verbose
+    [switch]$ImportOnly,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$VerboseOutput
 )
 
 # Service Configuration
@@ -72,7 +75,7 @@ function Load-Configuration {
         Write-Error "Missing required configuration keys: $($missingKeys -join ', ')"
         Write-Host @"
 Add the following to your .env file:
-API_BASE_URL=http://localhost/anime_prompt_gen/backend/api/v1
+API_BASE_URL=http://localhost/anime_prompt_gen/api/v1
 COMFYUI_SERVER=127.0.0.1:8188
 GALLERY_BASE_PATH=H:\gallery
 FTP_SERVER=your.ftp.server.com
@@ -107,7 +110,7 @@ function Write-ServiceLog {
     }
     
     # Write to console if verbose or requested
-    if ($ToConsole -or $Verbose) {
+    if ($ToConsole -or $VerboseOutput) {
         $color = switch ($Level) {
             "INFO" { "Cyan" }
             "WARNING" { "Yellow" }
@@ -213,7 +216,7 @@ function Complete-ImageGeneration {
 # Image Generation Functions
 function Generate-Image {
     param(
-        [hashtable]$Job
+        [PSCustomObject]$Job
     )
     
     Write-ServiceInfo "Starting image generation for job $($Job.id): $($Job.generator_type)"
@@ -279,8 +282,8 @@ function Generate-Image {
             return $false
         }
         
-        # Upload to gallery and FTP
-        $uploadResult = Upload-ImageToGallery -LocalPath $tempOutputPath -Filename $filename -GalleryType $Job.generator_type -QueueId $Job.id
+        # Store image and upload to FTP
+        $uploadResult = Store-ImageAndUpload -LocalPath $tempOutputPath -Filename $filename -GalleryType $Job.generator_type -QueueId $Job.id
         
         if ($uploadResult) {
             # Complete the job with image data
@@ -291,7 +294,6 @@ function Generate-Image {
                 file_size_bytes = $uploadResult.file_size
                 ftp_path = $uploadResult.ftp_path
                 gallery_url = $uploadResult.gallery_url
-                thumbnail_path = $uploadResult.thumbnail_path
                 width = $width
                 height = $height
                 generation_params = $params
@@ -320,7 +322,7 @@ function Generate-Image {
     }
 }
 
-function Upload-ImageToGallery {
+function Store-ImageAndUpload {
     param(
         [string]$LocalPath,
         [string]$Filename,
@@ -329,56 +331,48 @@ function Upload-ImageToGallery {
     )
     
     try {
-        Write-ServiceInfo "Uploading image to gallery: $GalleryType/$Filename"
+        Write-ServiceInfo "Storing image locally and uploading to FTP: $GalleryType/$Filename"
         
-        # Create gallery type directory
+        # Create gallery type directory in F:\WebHatchery\gallery
         $galleryTypePath = Join-Path $global:Config.GALLERY_BASE_PATH $GalleryType
         if (-not (Test-Path $galleryTypePath)) {
             New-Item -ItemType Directory -Path $galleryTypePath -Force | Out-Null
             Write-ServiceInfo "Created gallery directory: $galleryTypePath"
         }
         
-        # Copy to local gallery
-        $localGalleryPath = Join-Path $galleryTypePath $Filename
-        Copy-Item $LocalPath $localGalleryPath -Force
+        # Copy to local storage
+        $localStoragePath = Join-Path $galleryTypePath $Filename
+        Copy-Item $LocalPath $localStoragePath -Force
         
         # Get file size
-        $fileInfo = Get-Item $localGalleryPath
+        $fileInfo = Get-Item $localStoragePath
         $fileSize = $fileInfo.Length
         
-        # Generate thumbnail (simple copy for now - could be enhanced with actual thumbnail generation)
-        $thumbnailDir = Join-Path $galleryTypePath "thumbnails"
-        if (-not (Test-Path $thumbnailDir)) {
-            New-Item -ItemType Directory -Path $thumbnailDir -Force | Out-Null
-        }
-        
-        $thumbnailFilename = "thumb_$Filename"
-        $thumbnailPath = Join-Path $thumbnailDir $thumbnailFilename
-        Copy-Item $LocalPath $thumbnailPath -Force
+        Write-ServiceInfo "Image stored locally: $localStoragePath ($fileSize bytes)"
         
         # Upload to FTP
-        $ftpResult = Upload-ToFTP -LocalPath $localGalleryPath -RemotePath "/$GalleryType/$Filename" -ThumbnailLocalPath $thumbnailPath -ThumbnailRemotePath "/$GalleryType/thumbnails/$thumbnailFilename"
+        $ftpResult = Upload-ToFTP -LocalPath $localStoragePath -RemotePath "/$GalleryType/$Filename"
         
         if ($ftpResult) {
-            # Construct gallery URL
+            # Construct gallery URL  
             $galleryUrl = "$($global:Config.GALLERY_BASE_URL)/$GalleryType/$Filename"
             
             $result = @{
-                local_path = $localGalleryPath
+                local_path = $localStoragePath
                 file_size = $fileSize
                 ftp_path = $ftpResult.ftp_path
                 gallery_url = $galleryUrl
-                thumbnail_path = $thumbnailPath
             }
             
-            Write-ServiceInfo "Image uploaded successfully to gallery and FTP"
+            Write-ServiceInfo "Image stored and uploaded successfully"
             return $result
         }
         
+        Write-ServiceError "FTP upload failed, but image is stored locally at: $localStoragePath"
         return $null
         
     } catch {
-        Write-ServiceError "Failed to upload image to gallery: $($_.Exception.Message)"
+        Write-ServiceError "Failed to store and upload image: $($_.Exception.Message)"
         return $null
     }
 }
@@ -386,9 +380,7 @@ function Upload-ImageToGallery {
 function Upload-ToFTP {
     param(
         [string]$LocalPath,
-        [string]$RemotePath,
-        [string]$ThumbnailLocalPath = $null,
-        [string]$ThumbnailRemotePath = $null
+        [string]$RemotePath
     )
     
     try {
@@ -405,23 +397,13 @@ function Upload-ToFTP {
             PassiveMode = ($global:Config.FTP_PASSIVE_MODE -ne "false")
         }
         
-        # Upload main image
+        # Upload image
         $fullRemotePath = "$($ftpConfig.RemoteRoot)$RemotePath".Replace('//', '/')
         $uploadSuccess = Upload-FileToFTP -LocalPath $LocalPath -RemotePath $fullRemotePath -Config $ftpConfig -CreateDirectories
         
         if (-not $uploadSuccess) {
-            Write-ServiceError "Failed to upload main image to FTP"
+            Write-ServiceError "Failed to upload image to FTP"
             return $null
-        }
-        
-        # Upload thumbnail if provided
-        if ($ThumbnailLocalPath -and $ThumbnailRemotePath -and (Test-Path $ThumbnailLocalPath)) {
-            $fullThumbnailRemotePath = "$($ftpConfig.RemoteRoot)$ThumbnailRemotePath".Replace('//', '/')
-            $thumbnailSuccess = Upload-FileToFTP -LocalPath $ThumbnailLocalPath -RemotePath $fullThumbnailRemotePath -Config $ftpConfig -CreateDirectories
-            
-            if (-not $thumbnailSuccess) {
-                Write-ServiceWarning "Failed to upload thumbnail to FTP, but main image uploaded successfully"
-            }
         }
         
         Write-ServiceInfo "FTP upload completed successfully"
@@ -544,7 +526,7 @@ function Process-PendingJobs {
 }
 
 function Start-JobProcessing {
-    param([hashtable]$Job)
+    param([PSCustomObject]$Job)
     
     try {
         $jobId = ++$global:JobCounter
@@ -555,13 +537,34 @@ function Start-JobProcessing {
         $runspace.AddScript({
             param($Job, $Config, $ScriptRoot)
             
-            # Re-import functions in the runspace
-            . $ScriptRoot/image-service-worker.ps1 -ConfigFile $Config.ConfigFile
+            # Set configuration environment variables in the runspace
+            foreach ($key in $Config.Keys) {
+                [Environment]::SetEnvironmentVariable($key, $Config[$key])
+            }
+            
+            # Create global config object in runspace from passed config hashtable
+            $global:Config = New-Object PSObject
+            foreach ($key in $Config.Keys) {
+                $global:Config | Add-Member -MemberType NoteProperty -Name $key -Value $Config[$key]
+            }
+            
+            # Set script root and change to service directory
+            $env:SCRIPT_ROOT = $ScriptRoot
+            Set-Location -Path $ScriptRoot
+            
+            # Source the functions we need (without re-initializing the service)
+            . "$ScriptRoot/image-service-worker.ps1" -ImportOnly
             
             return Generate-Image -Job $Job
         })
+        # Convert config to a simple hashtable for passing to runspace
+        $configHash = @{}
+        foreach ($key in $global:Config.PSObject.Properties.Name) {
+            $configHash[$key] = $global:Config.$key
+        }
+        
         $runspace.AddArgument($Job)
-        $runspace.AddArgument($global:Config)
+        $runspace.AddArgument($configHash)
         $runspace.AddArgument($SCRIPT_ROOT)
         
         # Start async execution
@@ -595,10 +598,20 @@ function Cleanup-CompletedJobs {
                 $result = $jobInfo.Runspace.EndInvoke($jobInfo.AsyncResult)
                 $duration = (Get-Date) - $jobInfo.StartTime
                 
-                if ($result) {
+                # Check for errors in the runspace
+                $errors = $jobInfo.Runspace.Streams.Error
+                if ($errors.Count -gt 0) {
+                    Write-ServiceError "Job $jobId (Queue ID: $($jobInfo.QueueId)) completed with $($errors.Count) error(s):"
+                    foreach ($error in $errors) {
+                        Write-ServiceError "  - $($error.Exception.Message)"
+                        if ($VerboseOutput) {
+                            Write-ServiceDebug "    Full error: $($error.ToString())"
+                        }
+                    }
+                } elseif ($result) {
                     Write-ServiceInfo "Job $jobId completed successfully (Queue ID: $($jobInfo.QueueId)) - Duration: $([math]::Round($duration.TotalMinutes, 1)) minutes"
                 } else {
-                    Write-ServiceWarning "Job $jobId completed with errors (Queue ID: $($jobInfo.QueueId))"
+                    Write-ServiceWarning "Job $jobId completed with no result (Queue ID: $($jobInfo.QueueId)) - Duration: $([math]::Round($duration.TotalMinutes, 1)) minutes"
                 }
             } catch {
                 Write-ServiceError "Error completing job $jobId`: $($_.Exception.Message)"
@@ -685,6 +698,21 @@ function Stop-Service {
 function Test-ServiceConfiguration {
     Write-ServiceInfo "Testing service configuration..."
     
+    # Create gallery directory if it doesn't exist
+    $galleryPath = $global:Config.GALLERY_BASE_PATH
+    if (-not (Test-Path $galleryPath)) {
+        Write-ServiceInfo "Creating gallery directory: $galleryPath"
+        try {
+            New-Item -Path $galleryPath -ItemType Directory -Force | Out-Null
+            Write-ServiceInfo "Gallery directory created successfully"
+        } catch {
+            Write-ServiceError "Failed to create gallery directory: $($_.Exception.Message)"
+            return $false
+        }
+    } else {
+        Write-ServiceInfo "Gallery directory exists: $galleryPath"
+    }
+    
     # Test API connection
     Write-ServiceInfo "Testing API connection..."
     $apiTest = Invoke-ApiRequest -Endpoint "/images/stats"
@@ -758,13 +786,17 @@ function Test-ServiceConfiguration {
 # Signal handlers
 $global:ExitRequested = $false
 
-# Handle Ctrl+C gracefully
-[Console]::CancelKeyPress += {
-    param($sender, $e)
-    $e.Cancel = $true
-    Write-ServiceInfo "Exit requested by user..."
-    $global:ServiceRunning = $false
-    $global:ExitRequested = $true
+# Handle Ctrl+C gracefully (when supported)
+try {
+    [Console]::CancelKeyPress += {
+        param($sender, $e)
+        $e.Cancel = $true
+        Write-ServiceInfo "Exit requested by user..."
+        $global:ServiceRunning = $false
+        $global:ExitRequested = $true
+    }
+} catch {
+    Write-ServiceDebug "Console.CancelKeyPress event handler not available in this context"
 }
 
 # Main Execution
@@ -811,7 +843,7 @@ function Main {
     Write-ServiceInfo "Service shutdown complete"
 }
 
-# Run main function if script is executed directly
-if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Name) {
+# Run main function if script is executed directly and not just importing functions
+if (-not $ImportOnly -and $MyInvocation.MyCommand.Path -like "*image-service-worker.ps1") {
     Main
 }

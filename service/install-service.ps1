@@ -158,9 +158,9 @@ Write-Host ""
 Write-Host "Configuration Validation:" -ForegroundColor Yellow
 $envFile = Join-Path $SCRIPT_ROOT ".env"
 if (Test-Path $envFile) {
-    Write-Host "  ✓ Configuration file found: $envFile" -ForegroundColor Green
+    Write-Host "  [OK] Configuration file found: $envFile" -ForegroundColor Green
 } else {
-    Write-Host "  ✗ Configuration file missing: $envFile" -ForegroundColor Red
+    Write-Host "  [MISSING] Configuration file missing: $envFile" -ForegroundColor Red
     Write-Host "    Please copy .env.example to .env and configure it before starting the service" -ForegroundColor Yellow
 }
 

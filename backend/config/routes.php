@@ -14,6 +14,8 @@ use AnimePromptGen\Controllers\GameAssetsController;
 use AnimePromptGen\Controllers\AnimeAttributesController;
 use AnimePromptGen\Controllers\GeneratorAttributesController;
 use AnimePromptGen\Controllers\AttributeConfigController;
+use AnimePromptGen\Controllers\ImageController;
+use AnimePromptGen\Controllers\ImageQueueController;
 
 return function (App $app) {
     // API base path
@@ -87,6 +89,21 @@ return function (App $app) {
         $group->get('/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
         $group->get('/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
         
+        // Image generation and management routes (specific routes MUST come before variable routes)
+        $group->post('/images/generate', [ImageQueueController::class, 'queueGeneration']);
+        $group->get('/images/queue', [ImageQueueController::class, 'getQueue']);
+        $group->get('/images/queue/status', [ImageQueueController::class, 'getQueueStatus']);
+        $group->put('/images/queue/{id}/status', [ImageQueueController::class, 'updateStatus']);
+        $group->delete('/images/queue/{id}', [ImageQueueController::class, 'cancelGeneration']);
+        
+        $group->get('/images/stats', [ImageController::class, 'getGalleryStats']);
+        $group->get('/images', [ImageController::class, 'getImages']);
+        $group->get('/images/{id}', [ImageController::class, 'getImage']);
+        $group->get('/images/{id}/download', [ImageController::class, 'downloadImage']);
+        $group->post('/images/{queue_id}/complete', [ImageController::class, 'completeGeneration']);
+        
+        $group->get('/collections', [ImageController::class, 'getCollections']);
+
         // Health check
         $group->get('/health', function ($request, $response) {
             $response->getBody()->write(json_encode([

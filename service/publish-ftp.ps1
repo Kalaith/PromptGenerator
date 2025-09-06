@@ -687,12 +687,12 @@ FTP Deployment:
     FTP_PASSIVE_MODE=true
 
 FEATURES:
-    • Dual deployment: File system and/or FTP
-    • Smart vendor skipping: Skip vendor uploads if composer.lock unchanged
-    • Connection testing: Validates FTP connection before deployment
-    • Selective cleaning: Cleans only relevant files, preserves others
-    • Progress tracking: Detailed progress and error reporting
-    • Environment support: Separate preview and production configurations
+    - Dual deployment: File system and/or FTP
+    - Smart vendor skipping: Skip vendor uploads if composer.lock unchanged
+    - Connection testing: Validates FTP connection before deployment
+    - Selective cleaning: Cleans only relevant files, preserves others
+    - Progress tracking: Detailed progress and error reporting
+    - Environment support: Separate preview and production configurations
 
 "@ -ForegroundColor White
 }

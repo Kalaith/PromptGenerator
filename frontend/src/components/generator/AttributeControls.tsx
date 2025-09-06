@@ -51,7 +51,7 @@ export const AttributeControls: React.FC<AttributeControlsProps> = ({
               >
                 <option value="">Any</option>
                 {(attributeOptions[attrConfig.category] || []).map((option, index) => (
-                  <option key={option.value || `option-${index}`} value={option.value}>
+                  <option key={`${attrConfig.category}-${option.value}-${index}`} value={option.value}>
                     {option.label || option.value}
                   </option>
                 ))}

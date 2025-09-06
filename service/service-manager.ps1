@@ -1,9 +1,9 @@
-# Anime Prompt Generator - Service Manager
+# Anime Prompt Generator - Service Manager (Fixed)
 # Utility script for managing the image service worker
 
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [ValidateSet("start", "stop", "restart", "status", "logs", "test", "config")]
+    [ValidateSet("start", "stop", "restart", "status", "logs", "test", "config", "help")]
     [string]$Action,
     
     [Parameter(Mandatory=$false)]
@@ -127,16 +127,16 @@ function Show-Status {
     # Check if config file exists
     Write-Status "`nConfiguration:" "Cyan"
     if (Test-Path $CONFIG_FILE) {
-        Write-Status "✓ Config file exists: $CONFIG_FILE" "Green"
+        Write-Status "[OK] Config file exists: $CONFIG_FILE" "Green"
     } else {
-        Write-Status "✗ Config file missing: $CONFIG_FILE" "Red"
+        Write-Status "[ERROR] Config file missing: $CONFIG_FILE" "Red"
         Write-Status "  Copy .env.example to .env and configure it" "Yellow"
     }
     
     # Check log file
     if (Test-Path $LOG_FILE) {
         $logInfo = Get-Item $LOG_FILE
-        Write-Status "✓ Log file: $LOG_FILE ($($logInfo.Length) bytes)" "Green"
+        Write-Status "[OK] Log file: $LOG_FILE ($($logInfo.Length) bytes)" "Green"
     } else {
         Write-Status "- No log file found yet" "Gray"
     }
@@ -191,26 +191,26 @@ function Test-ServiceConfiguration {
     Write-Status "==============================" "Cyan"
     
     if (-not (Test-Path $SERVICE_SCRIPT)) {
-        Write-Status "✗ Service script not found: $SERVICE_SCRIPT" "Red"
+        Write-Status "[ERROR] Service script not found: $SERVICE_SCRIPT" "Red"
         return
     }
-    Write-Status "✓ Service script found" "Green"
+    Write-Status "[OK] Service script found" "Green"
     
     if (-not (Test-Path $CONFIG_FILE)) {
-        Write-Status "✗ Configuration file not found: $CONFIG_FILE" "Red"
+        Write-Status "[ERROR] Configuration file not found: $CONFIG_FILE" "Red"
         Write-Status "  Copy .env.example to .env and configure it" "Yellow"
         return
     }
-    Write-Status "✓ Configuration file found" "Green"
+    Write-Status "[OK] Configuration file found" "Green"
     
     # Run the service in test mode
     Write-Status "`nRunning configuration test..." "Yellow"
     
     try {
         & $SERVICE_SCRIPT -ConfigFile ".env" -TestMode
-        Write-Status "`n✓ Configuration test completed" "Green"
+        Write-Status "`n[OK] Configuration test completed" "Green"
     } catch {
-        Write-Status "`n✗ Configuration test failed: $($_.Exception.Message)" "Red"
+        Write-Status "`n[ERROR] Configuration test failed: $($_.Exception.Message)" "Red"
     }
 }
 
@@ -249,40 +249,40 @@ function Show-Configuration {
 }
 
 function Show-Help {
-    Write-Host @"
-Anime Prompt Generator - Service Manager
-========================================
-
-Usage: .\service-manager.ps1 <action> [options]
-
-ACTIONS:
-  start     Start the image service
-  stop      Stop the image service
-  restart   Restart the image service
-  status    Show service status and recent logs
-  logs      Show service logs
-  test      Test service configuration
-  config    Show current configuration
-
-OPTIONS:
-  -ServiceName <name>   Service name (default: AnimePromptGen-ImageWorker)
-  -Follow               Follow logs in real-time (with 'logs' action)
-  -Lines <number>       Number of log lines to show (default: 20)
-
-EXAMPLES:
-  .\service-manager.ps1 start                # Start the service
-  .\service-manager.ps1 status               # Show service status
-  .\service-manager.ps1 logs -Follow         # Follow logs in real-time
-  .\service-manager.ps1 logs -Lines 50       # Show last 50 log lines
-  .\service-manager.ps1 test                 # Test configuration
-  .\service-manager.ps1 config               # Show configuration
-
-SERVICE MANAGEMENT:
-  Install:     .\install-service.ps1
-  Uninstall:   .\uninstall-service.ps1
-  Manage:      .\service-manager.ps1
-
-"@ -ForegroundColor White
+    Write-Host ""
+    Write-Host "Anime Prompt Generator - Service Manager" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Usage: .\service-manager.ps1 [action] [options]" -ForegroundColor White
+    Write-Host ""
+    Write-Host "ACTIONS:" -ForegroundColor Yellow
+    Write-Host "  start     Start the image service" -ForegroundColor White
+    Write-Host "  stop      Stop the image service" -ForegroundColor White
+    Write-Host "  restart   Restart the image service" -ForegroundColor White
+    Write-Host "  status    Show service status and recent logs" -ForegroundColor White
+    Write-Host "  logs      Show service logs" -ForegroundColor White
+    Write-Host "  test      Test service configuration" -ForegroundColor White
+    Write-Host "  config    Show current configuration" -ForegroundColor White
+    Write-Host "  help      Show this help message" -ForegroundColor White
+    Write-Host ""
+    Write-Host "OPTIONS:" -ForegroundColor Yellow
+    Write-Host "  -ServiceName [name]   Service name (default: AnimePromptGen-ImageWorker)" -ForegroundColor White
+    Write-Host "  -Follow               Follow logs in real-time (with 'logs' action)" -ForegroundColor White
+    Write-Host "  -Lines [number]       Number of log lines to show (default: 20)" -ForegroundColor White
+    Write-Host ""
+    Write-Host "EXAMPLES:" -ForegroundColor Yellow
+    Write-Host "  .\service-manager.ps1 start                # Start the service" -ForegroundColor Gray
+    Write-Host "  .\service-manager.ps1 status               # Show service status" -ForegroundColor Gray
+    Write-Host "  .\service-manager.ps1 logs -Follow         # Follow logs in real-time" -ForegroundColor Gray
+    Write-Host "  .\service-manager.ps1 logs -Lines 50       # Show last 50 log lines" -ForegroundColor Gray
+    Write-Host "  .\service-manager.ps1 test                 # Test configuration" -ForegroundColor Gray
+    Write-Host "  .\service-manager.ps1 config               # Show configuration" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "SERVICE MANAGEMENT:" -ForegroundColor Yellow
+    Write-Host "  Install:     .\install-service.ps1" -ForegroundColor White
+    Write-Host "  Uninstall:   .\uninstall-service.ps1" -ForegroundColor White
+    Write-Host "  Manage:      .\service-manager.ps1" -ForegroundColor White
+    Write-Host ""
 }
 
 # Main execution
@@ -297,6 +297,7 @@ switch ($Action.ToLower()) {
     "help" { Show-Help }
     default { 
         Write-Status "Unknown action: $Action" "Red"
+        Write-Host ""
         Show-Help
     }
 }

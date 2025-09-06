@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PromptApi } from '../api/promptApi';
+import { ImageApi } from '../api/imageApi';
 import { apiClient } from '../api/client';
 import type { GeneratePromptsRequest } from '../api/types';
 import type { DescriptionTemplate } from '../api/descriptionTemplateApi';
@@ -33,6 +34,11 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
   const [attributeConfigs, setAttributeConfigs] = useState<AttributeConfig[]>([]);
   const [attributeOptions, setAttributeOptions] = useState<Record<string, Array<{label: string, value: string}>>>({});
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
+  
+  // Image generation state
+  const [imageGenerationEnabled, setImageGenerationEnabled] = useState<boolean>(false);
+  const [imageWidth, setImageWidth] = useState<number>(1024);
+  const [imageHeight, setImageHeight] = useState<number>(1024);
 
   const addGeneratedPrompts = usePromptStore((state) => state.addGeneratedPrompts);
   const { generateAnimePrompts, loading, error, clearError } = usePromptGeneration();
@@ -162,6 +168,37 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
               tags: prompt.tags,
               timestamp: Date.now(),
             });
+
+            // Queue image generation if enabled
+            if (imageGenerationEnabled) {
+              try {
+                await ImageApi.queueImageGeneration({
+                  prompt_id: prompt.id,
+                  generator_type: config.apiType,
+                  prompt_text: prompt.description,
+                  width: imageWidth,
+                  height: imageHeight,
+                  generation_params: {
+                    style: config.apiType,
+                    species: species !== 'random' ? species : undefined,
+                    attributes: selectedAttributes,
+                    template_id: selectedTemplate?.id,
+                  },
+                });
+
+                logger.info('Image generation queued', {
+                  component: 'useUnifiedGenerator',
+                  promptId: prompt.id,
+                  dimensions: `${imageWidth}x${imageHeight}`,
+                });
+              } catch (queueError) {
+                logger.warn('Failed to queue image generation', {
+                  component: 'useUnifiedGenerator',
+                  promptId: prompt.id,
+                  error: queueError instanceof Error ? queueError.message : 'Unknown error',
+                });
+              }
+            }
           } catch (historyError) {
             logger.warn('Failed to add prompt to history', { 
               component: 'useUnifiedGenerator',
@@ -196,12 +233,22 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
     attributeOptions,
     selectedAttributes,
     
+    // Image generation state
+    imageGenerationEnabled,
+    imageWidth,
+    imageHeight,
+    
     // Actions
     setPromptCount,
     setSpecies,
     setSelectedTemplate,
     updateSelectedAttribute,
     handleGenerate,
+    
+    // Image generation actions
+    setImageGenerationEnabled,
+    setImageWidth,
+    setImageHeight,
     
     // Status
     loading,

@@ -14,6 +14,11 @@ interface AttributeConfig {
   updated_at: string;
 }
 
+interface AttributeOption {
+  label: string;
+  value: string;
+}
+
 const AttributeManager: React.FC = () => {
   const [configs, setConfigs] = useState<AttributeConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +32,12 @@ const AttributeManager: React.FC = () => {
     sort_order: 0
   });
 
+  // State for managing attribute options
+  const [attributeOptions, setAttributeOptions] = useState<Record<string, Record<string, AttributeOption[]>>>({});
+  const [editingOptions, setEditingOptions] = useState<string | null>(null); // stores "generatorType:category"
+  const [newOptionValue, setNewOptionValue] = useState('');
+  const [newOptionLabel, setNewOptionLabel] = useState('');
+
   useEffect(() => {
     loadConfigs();
   }, []);
@@ -37,6 +48,8 @@ const AttributeManager: React.FC = () => {
       const response = await apiClient.get<{ success: boolean; data: AttributeConfig[] }>('/attribute-config');
       if ((response as any).success) {
         setConfigs(response.data);
+        // Load attribute options for all active configs
+        await loadAttributeOptions(response.data);
       } else {
         setError('Failed to load attribute configurations');
       }
@@ -44,6 +57,30 @@ const AttributeManager: React.FC = () => {
       setError('Error loading configurations: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAttributeOptions = async (configsData: AttributeConfig[]) => {
+    try {
+      // Get unique generator types from active configs
+      const generatorTypes = [...new Set(configsData.filter(c => c.is_active).map(c => c.generator_type))];
+      
+      const optionsMap: Record<string, Record<string, AttributeOption[]>> = {};
+      
+      for (const generatorType of generatorTypes) {
+        try {
+          const response = await apiClient.get(`/generator-attributes/${generatorType}`);
+          if (response && (response as any).data && (response as any).data.attributes) {
+            optionsMap[generatorType] = (response as any).data.attributes;
+          }
+        } catch (err) {
+          console.warn(`Failed to load options for ${generatorType}:`, err);
+        }
+      }
+      
+      setAttributeOptions(optionsMap);
+    } catch (err) {
+      console.error('Error loading attribute options:', err);
     }
   };
 
@@ -115,6 +152,67 @@ const AttributeManager: React.FC = () => {
       }
     } catch (err) {
       setError('Error deleting attribute: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  // Functions for managing attribute options
+  const addAttributeOption = async (generatorType: string, category: string) => {
+    if (!newOptionValue.trim()) {
+      setError('Option value is required');
+      return;
+    }
+
+    try {
+      const response = await apiClient.post(`/generator-attributes/${generatorType}/${category}/options`, {
+        value: newOptionValue.trim(),
+        label: newOptionLabel.trim() || newOptionValue.trim()
+      });
+
+      if ((response as any).success) {
+        // Reload options for this generator type
+        const updatedOptionsResponse = await apiClient.get(`/generator-attributes/${generatorType}`);
+        if (updatedOptionsResponse && (updatedOptionsResponse as any).data && (updatedOptionsResponse as any).data.attributes) {
+          setAttributeOptions(prev => ({
+            ...prev,
+            [generatorType]: (updatedOptionsResponse as any).data.attributes
+          }));
+        }
+        
+        setNewOptionValue('');
+        setNewOptionLabel('');
+      } else {
+        setError('Failed to add attribute option');
+      }
+    } catch (err) {
+      setError('Error adding attribute option: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const deleteAttributeOption = async (generatorType: string, category: string, value: string) => {
+    if (!confirm(`Are you sure you want to delete the option "${value}" from ${category}?`)) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.delete(`/generator-attributes/${generatorType}/${category}/options/${encodeURIComponent(value)}`);
+      
+      if ((response as any).success) {
+        // Update local state
+        setAttributeOptions(prev => ({
+          ...prev,
+          [generatorType]: {
+            ...prev[generatorType],
+            [category]: {
+              ...prev[generatorType][category],
+              options: prev[generatorType][category]?.options?.filter(opt => opt.value !== value) || []
+            }
+          }
+        }));
+      } else {
+        setError('Failed to delete attribute option');
+      }
+    } catch (err) {
+      setError('Error deleting attribute option: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
@@ -308,6 +406,15 @@ const AttributeManager: React.FC = () => {
                         <div className="text-xs text-gray-500">
                           ID: {config.id}
                         </div>
+                        {config.is_active && config.input_type === 'select' && (
+                          <button
+                            onClick={() => setEditingOptions(`${generatorType}:${config.category}`)}
+                            className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 flex items-center gap-1"
+                            title="Manage options for this attribute"
+                          >
+                            ⚙️ Options
+                          </button>
+                        )}
                         <button
                           onClick={() => deleteAttribute(config.id, config.label)}
                           className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 flex items-center gap-1"
@@ -395,6 +502,98 @@ const AttributeManager: React.FC = () => {
                 >
                   ❌ Cancel
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Attribute Options Management */}
+          {editingOptions === `${generatorType}:${editingOptions?.split(':')[1]}` && editingOptions.startsWith(`${generatorType}:`) && (
+            <div className="mt-6 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <span>🎯</span>
+                  Manage Options for "{editingOptions.split(':')[1]}"
+                </h3>
+                <button
+                  onClick={() => setEditingOptions(null)}
+                  className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Current Options */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-3 text-gray-700">Current Options:</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {(attributeOptions[generatorType]?.[editingOptions.split(':')[1]]?.options || []).map((option, index) => (
+                    <div key={`${option.value}-${index}`} className="flex items-center justify-between bg-white border rounded p-2">
+                      <div className="flex-1">
+                        <span className="font-medium text-sm">{option.label || option.value}</span>
+                        {option.label && option.label !== option.value && (
+                          <div className="text-xs text-gray-500">Value: {option.value}</div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => deleteAttributeOption(generatorType, editingOptions.split(':')[1], option.value)}
+                        className="text-red-600 hover:text-red-800 ml-2 text-sm"
+                        title="Delete this option"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {(attributeOptions[generatorType]?.[editingOptions.split(':')[1]]?.options || []).length === 0 && (
+                  <div className="text-gray-500 italic text-sm">No options defined yet. Add some below!</div>
+                )}
+              </div>
+
+              {/* Add New Option */}
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 text-gray-700">Add New Option:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Value *</label>
+                    <input
+                      type="text"
+                      value={newOptionValue}
+                      onChange={(e) => setNewOptionValue(e.target.value)}
+                      placeholder="e.g., large_floppy_ears"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                    <div className="text-xs text-gray-500 mt-1">Internal value (use underscores)</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Display Label</label>
+                    <input
+                      type="text"
+                      value={newOptionLabel}
+                      onChange={(e) => setNewOptionLabel(e.target.value)}
+                      placeholder="e.g., Large Floppy Ears"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                    <div className="text-xs text-gray-500 mt-1">User-friendly name (optional)</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => addAttributeOption(generatorType, editingOptions.split(':')[1])}
+                      disabled={!newOptionValue.trim()}
+                      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm flex items-center gap-2"
+                    >
+                      ➕ Add Option
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNewOptionValue('');
+                        setNewOptionLabel('');
+                      }}
+                      className="bg-gray-400 text-white px-3 py-2 rounded hover:bg-gray-500 text-sm"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

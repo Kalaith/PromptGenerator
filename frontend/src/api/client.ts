@@ -37,7 +37,7 @@ class ApiClient {
         ...options,
         signal: controller.signal,
         headers: {
-          // Remove Content-Type to avoid preflight - browser will set automatically
+          'Content-Type': 'application/json',
           ...options.headers,
         },
       });
