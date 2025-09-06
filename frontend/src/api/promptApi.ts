@@ -96,7 +96,7 @@ export class PromptApi {
   }
 
   // Get attributes for any generator type (generic)
-  static async getGeneratorAttributes(type: 'anime' | 'alien' | 'adventurer'): Promise<AnimeAttributesResponse> {
+  static async getGeneratorAttributes(type: 'animalGirl' | 'monster' | 'monsterGirl' | 'anime' | 'alien' | 'race' | 'random'): Promise<AnimeAttributesResponse> {
     return apiClient.get<AnimeAttributesResponse>(`/attributes/${type}`);
   }
 

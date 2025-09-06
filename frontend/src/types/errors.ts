@@ -3,6 +3,7 @@ export enum ErrorType {
   VALIDATION = 'VALIDATION',
   API = 'API',
   TIMEOUT = 'TIMEOUT',
+  AUTH = 'AUTH',
   UNKNOWN = 'UNKNOWN',
 }
 

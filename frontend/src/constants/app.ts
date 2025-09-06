@@ -1,8 +1,9 @@
 export const APP_CONSTANTS = {
   PROMPT_COUNT: {
     MIN: 1,
-    MAX: 100,
+    MAX: 50,
     DEFAULT: 10,
+    MAX_SAFE: 50, // Maximum for single generation to prevent server overload
   },
   HISTORY: {
     MAX_ITEMS: 50,
@@ -21,6 +22,7 @@ export const APP_CONSTANTS = {
   },
   STORAGE: {
     STORE_NAME: 'anime-prompt-storage',
+    IMAGE_STORE_NAME: 'anime-prompt-gen-images',
   },
 } as const;
 

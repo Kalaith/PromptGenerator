@@ -42,22 +42,30 @@ final class PromptGenerationService extends BaseGenerationService
             throw new \InvalidArgumentException("No species found for type: {$actualType}");
         }
 
-        // Generate attributes with extended options
-        $attributes = $this->generateExtendedAttributes($gender, $style, $environment);
+        try {
+            // Generate attributes with extended options
+            $attributes = $this->generateExtendedAttributes($gender, $style, $environment);
 
-        // Generate description
-        $description = $this->generateDescription($species, $attributes);
+            // Generate description
+            $description = $this->generateDescription($species, $attributes);
 
-        return [
-            'species' => $species,
-            'attributes' => $attributes,
-            'description' => $description,
-            'negative_prompt' => $species->negative_prompt ?: $this->generateStandardNegativePrompt(),
-            'tags' => $this->generateBaseTags($attributes, array_merge(
-                [$species->name],
-                $species->personality ?? []
-            ))
-        ];
+            return [
+                'species' => $species,
+                'attributes' => $attributes,
+                'description' => $description,
+                'negative_prompt' => $species->negative_prompt ?: $this->generateStandardNegativePrompt(),
+                'tags' => $this->generateBaseTags($attributes, array_merge(
+                    [$species->name],
+                    $species->personality ?? []
+                ))
+            ];
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                sprintf('Failed to generate prompt data for species %s: %s', $species->name, $e->getMessage()),
+                0,
+                $e
+            );
+        }
     }
 
     private function getSpeciesForGeneration(string $type, ?string $speciesName): ?UnifiedSpecies

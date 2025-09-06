@@ -19,7 +19,7 @@ const AdventurerGeneratorPanel: React.FC = () => {
   useEffect(() => {
     const loadAdventurerAttributes = async (): Promise<void> => {
       try {
-        const attributesResponse = await PromptApi.getGeneratorAttributes('adventurer');
+        const attributesResponse = await PromptApi.getGeneratorAttributes('race');
         setAdventurerAttributes(attributesResponse.data.attributes);
       } catch (loadError) {
         console.error('Failed to load adventurer attributes:', loadError);

@@ -51,7 +51,7 @@ const GeneratorTypeManager: React.FC = () => {
       name: newType.name || 'New Generator',
       description: newType.description || 'Description not set',
       icon: newType.icon || '🎯',
-      apiType: newType.apiType || 'anime',
+      apiType: (newType.apiType as GeneratorTypeConfig['apiType']) || 'anime',
       buttonGradient: newType.buttonGradient || 'bg-gradient-to-r from-blue-500 to-purple-500',
       focusColor: newType.focusColor || 'blue',
       isActive: newType.isActive !== false,
@@ -135,7 +135,10 @@ const GeneratorTypeManager: React.FC = () => {
                 <select
                   className="form-control"
                   value={newType.apiType || ''}
-                  onChange={(e) => setNewType(prev => ({ ...prev, apiType: e.target.value }))}
+                  onChange={(e) => setNewType(prev => ({ 
+                    ...prev, 
+                    apiType: e.target.value as GeneratorTypeConfig['apiType']
+                  }))}
                 >
                   <option value="">Select API Type</option>
                   <option value="animalGirl">Animal Girl</option>
@@ -268,7 +271,7 @@ const GeneratorTypeManager: React.FC = () => {
                       <select
                         className="form-control"
                         value={type.apiType}
-                        onChange={(e) => updateType(type.id, { apiType: e.target.value })}
+                        onChange={(e) => updateType(type.id, { apiType: e.target.value as GeneratorTypeConfig['apiType'] })}
                       >
                         <option value="animalGirl">Animal Girl</option>
                         <option value="monsterGirl">Monster Girl</option>

@@ -4,6 +4,7 @@ export { PromptApi } from './promptApi';
 export { SessionApi } from './sessionApi';
 export { TemplateApi } from './templateApi';
 export { DescriptionTemplateApi } from './descriptionTemplateApi';
+export { ImageApi } from './imageApi';
 
 // Export types
 export type { ApiResponse } from './client';
@@ -19,6 +20,16 @@ export type {
   CreateTemplateRequest,
   UpdateTemplateRequest,
   TemplateFilters,
+  // Image-related types
+  QueueImageRequest,
+  QueuedImageJob,
+  GeneratedImage,
+  ImageCollection,
+  ImageFilters,
+  ImageListResponse,
+  QueueStatusItem,
+  GalleryStats,
+  ImageGenerationParams,
 } from './types';
 
 export type {

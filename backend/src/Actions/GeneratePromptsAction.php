@@ -12,11 +12,19 @@ final class GeneratePromptsAction
         private readonly PromptGenerationService $promptGenerationService
     ) {}
 
+    private const MIN_PROMPT_COUNT = 1;
+    private const MAX_PROMPT_COUNT = 50;
+
     public function execute(int $count, string $type, ?string $species = null): array
     {
         // Validation
-        if ($count <= 0 || $count > 50) {
-            throw new \InvalidArgumentException('Count must be between 1 and 50');
+        if ($count < self::MIN_PROMPT_COUNT || $count > self::MAX_PROMPT_COUNT) {
+            throw new \InvalidArgumentException(sprintf(
+                'Count must be between %d and %d, got %d', 
+                self::MIN_PROMPT_COUNT, 
+                self::MAX_PROMPT_COUNT, 
+                $count
+            ));
         }
 
         if (empty($type)) {

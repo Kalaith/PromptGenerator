@@ -4,7 +4,7 @@ export interface GeneratorTypeConfig {
   name: string;
   description: string;
   icon: string;
-  apiType: string;
+  apiType: 'animalGirl' | 'monster' | 'monsterGirl' | 'anime' | 'alien' | 'race' | 'random';
   buttonGradient: string;
   focusColor: string;
   isActive: boolean;
