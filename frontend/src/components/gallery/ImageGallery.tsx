@@ -51,18 +51,18 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   const handleDownload = async (image: GeneratedImage) => {
     try {
-      await downloadImage(image.id);
+      await downloadImage(image);
     } catch (error) {
-      console.error('Failed to download image:', error);
+      // Error logged by downloadImage function
     }
   };
 
   const handleToggleFavorite = async (image: GeneratedImage) => {
     try {
       // This would require session/favorites implementation
-      console.log('Toggle favorite for image:', image.id);
+      // TODO: Implement favorite functionality
     } catch (error) {
-      console.error('Failed to toggle favorite:', error);
+      // Error would be logged by favorite function
     }
   };
 
@@ -83,7 +83,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     }
   };
 
-  const handleSortChange = (sortBy: string) => {
+  const handleSortChange = (sortBy: 'recent' | 'popular' | 'views' | 'downloads') => {
     handleFilterChange({ sort_by: sortBy });
   };
 
@@ -158,7 +158,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               </label>
               <select
                 value={filters.sort_by}
-                onChange={(e) => handleSortChange(e.target.value)}
+                onChange={(e) => handleSortChange(e.target.value as 'recent' | 'popular' | 'views' | 'downloads')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="recent">Most Recent</option>

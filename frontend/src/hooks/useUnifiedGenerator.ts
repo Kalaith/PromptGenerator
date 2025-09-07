@@ -187,18 +187,30 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
             // Queue image generation if enabled
             if (imageGenerationEnabled) {
               try {
+                // Handle random generator type by picking a valid one
+                const validTypes = ['anime', 'alien', 'race', 'monster', 'monsterGirl', 'animalGirl'] as const;
+                let actualGeneratorType: typeof validTypes[number] = 'anime';
+                
+                if (config.apiType === 'random') {
+                  actualGeneratorType = validTypes[Math.floor(Math.random() * validTypes.length)] as typeof validTypes[number];
+                } else if (config.apiType && validTypes.includes(config.apiType as any)) {
+                  actualGeneratorType = config.apiType as typeof validTypes[number];
+                }
+                  
                 await ImageApi.queueImageGeneration({
-                  prompt_id: prompt.id,
-                  generator_type: config.apiType,
+                  generator_type: actualGeneratorType,
                   prompt_text: prompt.description,
                   width: imageWidth,
                   height: imageHeight,
-                  generation_params: {
-                    style: config.apiType,
+                  requested_by: 'user',
+                  session_id: 'default',
+                  original_prompt_data: {
+                    prompt_id: prompt.id,
+                    style: actualGeneratorType,
                     species: species !== 'random' ? species : undefined,
                     attributes: selectedAttributes,
                     template_id: selectedTemplate?.id,
-                  },
+                  }
                 });
 
                 logger.info('Image generation queued', {

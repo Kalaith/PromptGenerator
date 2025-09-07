@@ -9,8 +9,8 @@ export const usePlaceholderInsertion = (onUpdateTemplate: (value: string) => voi
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const value = textarea.value;
-    const newValue = value.slice(0, start) + `{${placeholder}}` + value.slice(end);
+    const {value} = textarea;
+    const newValue = `${value.slice(0, start)  }{${placeholder}}${  value.slice(end)}`;
     
     onUpdateTemplate(newValue);
     

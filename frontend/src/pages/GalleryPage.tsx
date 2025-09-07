@@ -93,7 +93,7 @@ export const GalleryPage: React.FC = () => {
 
           {/* Gallery */}
           <div className={showQueue ? 'lg:col-span-3' : 'lg:col-span-4'}>
-            <ImageGallery galleryType={selectedType} />
+            <ImageGallery galleryType={selectedType || 'anime'} />
           </div>
         </div>
       </div>

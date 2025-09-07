@@ -1,7 +1,7 @@
 import { config } from '../config/app';
 import { AppErrorHandler, ErrorType } from '../types/errors';
 
-interface ApiResponse<T> {
+interface InternalApiResponse<T> {
   data?: T;
   success?: boolean;
   message?: string;
@@ -25,78 +25,96 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.config.baseUrl}${endpoint}`;
-    
-    // console.log(`API Request: ${options.method || 'GET'} ${url}`);
-    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      });
-
+      const response = await this.makeRequest(endpoint, options, controller.signal);
       clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw AppErrorHandler.createError(
-          ErrorType.API,
-          errorData.message || `HTTP ${response.status}: ${response.statusText}`,
-          response.status.toString(),
-          { status: response.status, statusText: response.statusText }
-        );
-      }
-
-      // Handle empty responses
-      const text = await response.text();
-      if (!text) {
-        return {} as T;
-      }
       
-      try {
-        return JSON.parse(text);
-      } catch (parseError) {
-        console.error('Failed to parse JSON response:', text);
-        throw AppErrorHandler.createError(
-          ErrorType.UNKNOWN,
-          `Invalid JSON response: ${text}`,
-          'PARSE_ERROR'
-        );
-      }
+      return await this.handleResponse<T>(response);
     } catch (error) {
       clearTimeout(timeoutId);
-      
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw AppErrorHandler.createError(ErrorType.TIMEOUT, 'Request timed out');
-      }
-      
-      if (error && typeof error === 'object' && 'type' in error) {
-        throw error;
-      }
-      
-      throw AppErrorHandler.fromApiError(error);
+      throw this.handleRequestError(error);
     }
+  }
+
+  private async makeRequest(
+    endpoint: string,
+    options: RequestInit,
+    signal: AbortSignal
+  ): Promise<Response> {
+    const url = `${this.config.baseUrl}${endpoint}`;
+    
+    return fetch(url, {
+      ...options,
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+  }
+
+  private async handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      await this.handleErrorResponse(response);
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return {} as T;
+    }
+    
+    return this.parseJsonResponse<T>(text);
+  }
+
+  private async handleErrorResponse(response: Response): Promise<never> {
+    const errorData = await response.json().catch(() => ({}));
+    throw AppErrorHandler.createError(
+      ErrorType.API,
+      errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+      response.status.toString(),
+      { status: response.status, statusText: response.statusText }
+    );
+  }
+
+  private parseJsonResponse<T>(text: string): T {
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw AppErrorHandler.createError(
+        ErrorType.UNKNOWN,
+        `Invalid JSON response: ${text}`,
+        'PARSE_ERROR'
+      );
+    }
+  }
+
+  private handleRequestError(error: unknown): never {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw AppErrorHandler.createError(ErrorType.TIMEOUT, 'Request timed out');
+    }
+    
+    if (error && typeof error === 'object' && 'type' in error) {
+      throw error;
+    }
+    
+    throw AppErrorHandler.fromApiError(error);
   }
 
   async get<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : null,
     });
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : null,
@@ -113,4 +131,4 @@ class ApiClient {
 // Create and export the API client instance
 export const apiClient = new ApiClient(config.getApi());
 
-export type { ApiResponse };
+export type { InternalApiResponse as ApiResponse };

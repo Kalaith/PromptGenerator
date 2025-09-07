@@ -71,30 +71,37 @@ export const useImages = () => {
     try {
       await loadImages(sessionFilters, append);
     } catch (error) {
-      logger.error('Failed to load images with session:', error);
+      logger.error('Failed to load images with session:', { error: String(error) });
       throw error;
     }
   }, [loadImages, session.sessionId]);
 
   const generateImage = useCallback(async (request: Omit<QueueImageRequest, 'session_id'>) => {
+    const {sessionId} = session;
+    if (!sessionId) {
+      throw new Error('Session ID is required for image generation');
+    }
+    
     const fullRequest: QueueImageRequest = {
       ...request,
-      session_id: session.sessionId || undefined,
-      requested_by: session.sessionId || 'anonymous'
+      session_id: sessionId,
+      requested_by: sessionId
     };
     
     try {
-      logger.info('Generating image with session:', fullRequest);
+      logger.info('Generating image with session:', { request: fullRequest });
       const queuedJob = await queueImageGeneration(fullRequest);
       
       // Auto-refresh queue status
       setTimeout(() => {
-        checkQueueStatus(session.sessionId);
+        if (sessionId) {
+          checkQueueStatus(sessionId);
+        }
       }, 2000);
       
       return queuedJob;
     } catch (error) {
-      logger.error('Failed to generate image:', error);
+      logger.error('Failed to generate image:', { error: String(error) });
       throw error;
     }
   }, [queueImageGeneration, checkQueueStatus, session.sessionId]);
@@ -155,8 +162,8 @@ export const useImages = () => {
     const currentIndex = images.findIndex(img => img.id === selectedImage.id);
     if (currentIndex >= 0 && currentIndex < images.length - 1) {
       const nextImage = images[currentIndex + 1];
-      setSelectedImage(nextImage);
-      return nextImage;
+      setSelectedImage(nextImage || null);
+      return nextImage || null;
     }
     return null;
   }, [selectedImage, images, setSelectedImage]);
@@ -167,8 +174,8 @@ export const useImages = () => {
     const currentIndex = images.findIndex(img => img.id === selectedImage.id);
     if (currentIndex > 0) {
       const prevImage = images[currentIndex - 1];
-      setSelectedImage(prevImage);
-      return prevImage;
+      setSelectedImage(prevImage || null);
+      return prevImage || null;
     }
     return null;
   }, [selectedImage, images, setSelectedImage]);

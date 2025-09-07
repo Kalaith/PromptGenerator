@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { APP_CONSTANTS } from '../constants/app';
 import { ImageApi } from '../api/imageApi';
-import { AppErrorHandler, ErrorType } from '../types/errors';
+import { AppErrorHandler } from '../types/errors';
 import { logger } from '../utils/logger';
 import type {
   GeneratedImage,
@@ -23,15 +23,29 @@ interface ImageState {
   hasMore: boolean;
   loading: boolean;
   
+  // Pagination object for compatibility
+  pagination: {
+    current_page: number;
+    per_page: number;
+    total_items: number;
+    total_pages: number;
+    has_more: boolean;
+  };
+  
+  // Current filters for compatibility
+  filters: ImageFilters;
+  
   // Collections
   collections: ImageCollection[];
   featuredCollections: ImageCollection[];
   collectionsLoading: boolean;
   
-  // Queue and generation
+  // Queue and generation  
   queueItems: QueueStatusItem[];
   queueLoading: boolean;
   generationQueue: QueuedImageJob[];
+  queue: QueueStatusItem[]; // Alias for compatibility
+  queueError: string | null;
   
   // Statistics
   galleryStats: GalleryStats | null;
@@ -65,6 +79,12 @@ interface ImageActions {
   getImage: (imageId: number) => Promise<GeneratedImage | null>;
   setSelectedImage: (image: GeneratedImage | null) => void;
   
+  // Compatibility methods for ImageGallery
+  fetchImages: (filters?: ImageFilters) => Promise<void>;
+  downloadImage: (image: GeneratedImage) => Promise<void>;
+  updateFilters: (filters: Partial<ImageFilters>) => void;
+  loadMore: () => Promise<void>;
+  
   // Collections
   loadCollections: (filters?: { featured?: boolean; limit?: number; type?: string }) => Promise<void>;
   loadFeaturedCollections: () => Promise<void>;
@@ -73,6 +93,10 @@ interface ImageActions {
   queueImageGeneration: (request: QueueImageRequest) => Promise<QueuedImageJob>;
   checkQueueStatus: (sessionId?: string) => Promise<void>;
   cancelGeneration: (queueId: number) => Promise<void>;
+  
+  // Queue management methods for ImageQueue compatibility
+  fetchQueue: () => Promise<void>;
+  cancelQueueItem: (queueId: number) => Promise<void>;
   
   // Statistics
   loadGalleryStats: (type?: string) => Promise<void>;
@@ -118,6 +142,18 @@ export const useImageStore = create<ImageStore>()(
       hasMore: false,
       loading: false,
       
+      // Pagination compatibility object
+      pagination: {
+        current_page: 1,
+        per_page: 20,
+        total_items: 0,
+        total_pages: 1,
+        has_more: false
+      },
+      
+      // Current filters
+      filters: defaultFilters,
+      
       collections: [],
       featuredCollections: [],
       collectionsLoading: false,
@@ -125,6 +161,8 @@ export const useImageStore = create<ImageStore>()(
       queueItems: [],
       queueLoading: false,
       generationQueue: [],
+      queue: [], // Alias for queueItems
+      queueError: null,
       
       galleryStats: null,
       statsLoading: false,
@@ -145,14 +183,14 @@ export const useImageStore = create<ImageStore>()(
       lastError: null,
 
       // Actions
-      loadImages: async (filters = {}, append = false) => {
+      loadImages: async (filters: Partial<ImageFilters> = {}, append = false): Promise<void> => {
         const state = get();
         
         try {
           set({ loading: true, error: null });
           
           const mergedFilters = { ...state.currentFilters, ...filters };
-          logger.info('Loading images with filters:', mergedFilters);
+          logger.info('Loading images with filters:', { filters: mergedFilters });
           
           const response = await ImageApi.getImages(mergedFilters);
           
@@ -163,6 +201,8 @@ export const useImageStore = create<ImageStore>()(
             totalItems: response.pagination.total_items,
             hasMore: response.pagination.has_more,
             currentFilters: mergedFilters,
+            filters: mergedFilters,
+            pagination: response.pagination,
             loading: false
           }));
           
@@ -170,7 +210,7 @@ export const useImageStore = create<ImageStore>()(
           
         } catch (error) {
           const errorMsg = AppErrorHandler.getErrorMessage(error);
-          logger.error('Failed to load images:', error);
+          logger.error('Failed to load images:', { error: String(error) });
           set({ 
             loading: false, 
             error: errorMsg,
@@ -180,7 +220,7 @@ export const useImageStore = create<ImageStore>()(
         }
       },
 
-      loadMoreImages: async () => {
+      loadMoreImages: async (): Promise<void> => {
         const state = get();
         
         if (!state.hasMore || state.loading) {
@@ -195,12 +235,12 @@ export const useImageStore = create<ImageStore>()(
         await get().loadImages(nextPageFilters, true);
       },
 
-      refreshImages: async () => {
+      refreshImages: async (): Promise<void> => {
         const state = get();
         await get().loadImages({ ...state.currentFilters, page: 1 }, false);
       },
 
-      getImage: async (imageId: number) => {
+      getImage: async (imageId: number): Promise<GeneratedImage | null> => {
         try {
           set({ error: null });
           
@@ -224,21 +264,21 @@ export const useImageStore = create<ImageStore>()(
           
         } catch (error) {
           const errorMsg = AppErrorHandler.getErrorMessage(error);
-          logger.error(`Failed to load image ${imageId}:`, error);
+          logger.error(`Failed to load image ${imageId}:`, { error: String(error), imageId });
           set({ error: errorMsg, lastError: new Date() });
           return null;
         }
       },
 
-      setSelectedImage: (image) => {
+      setSelectedImage: (image: GeneratedImage | null): void => {
         set({ selectedImage: image });
       },
 
-      loadCollections: async (filters = {}) => {
+      loadCollections: async (filters: Record<string, unknown> = {}): Promise<void> => {
         try {
           set({ collectionsLoading: true, error: null });
           
-          logger.info('Loading collections with filters:', filters);
+          logger.info('Loading collections with filters:', { filters });
           const collections = await ImageApi.getCollections(filters);
           
           set({ 
@@ -250,7 +290,7 @@ export const useImageStore = create<ImageStore>()(
           
         } catch (error) {
           const errorMsg = AppErrorHandler.getErrorMessage(error);
-          logger.error('Failed to load collections:', error);
+          logger.error('Failed to load collections:', { error: String(error) });
           set({ 
             collectionsLoading: false, 
             error: errorMsg,
@@ -260,22 +300,22 @@ export const useImageStore = create<ImageStore>()(
         }
       },
 
-      loadFeaturedCollections: async () => {
+      loadFeaturedCollections: async (): Promise<void> => {
         try {
           const collections = await ImageApi.getCollections({ featured: true, limit: 10 });
           set({ featuredCollections: collections });
           logger.info(`Loaded ${collections.length} featured collections`);
         } catch (error) {
-          logger.error('Failed to load featured collections:', error);
+          logger.error('Failed to load featured collections:', { error: String(error) });
           // Don't set error state for featured collections as it's not critical
         }
       },
 
-      queueImageGeneration: async (request) => {
+      queueImageGeneration: async (request: QueueImageRequest): Promise<QueuedImageJob> => {
         try {
           set({ error: null });
           
-          logger.info('Queueing image generation:', request);
+          logger.info('Queueing image generation:', { request });
           const queuedJob = await ImageApi.queueImageGeneration(request);
           
           set((state) => ({
@@ -287,21 +327,23 @@ export const useImageStore = create<ImageStore>()(
           
         } catch (error) {
           const errorMsg = AppErrorHandler.getErrorMessage(error);
-          logger.error('Failed to queue image generation:', error);
+          logger.error('Failed to queue image generation:', { error: String(error) });
           set({ error: errorMsg, lastError: new Date() });
           throw error;
         }
       },
 
-      checkQueueStatus: async (sessionId) => {
+      checkQueueStatus: async (sessionId?: string): Promise<void> => {
         try {
           set({ queueLoading: true, error: null });
           
-          const queueItems = await ImageApi.getQueueStatus(sessionId);
+          const queueItems = await ImageApi.getQueueStatus(sessionId || '');
           
           set({ 
-            queueItems, 
-            queueLoading: false 
+            queueItems,
+            queue: queueItems, // Update alias
+            queueLoading: false,
+            queueError: null
           });
           
           // Update generation queue with current status
@@ -314,16 +356,17 @@ export const useImageStore = create<ImageStore>()(
           
         } catch (error) {
           const errorMsg = AppErrorHandler.getErrorMessage(error);
-          logger.error('Failed to check queue status:', error);
+          logger.error('Failed to check queue status:', { error: String(error) });
           set({ 
-            queueLoading: false, 
+            queueLoading: false,
+            queueError: errorMsg,
             error: errorMsg,
             lastError: new Date()
           });
         }
       },
 
-      cancelGeneration: async (queueId) => {
+      cancelGeneration: async (queueId: number): Promise<void> => {
         try {
           set({ error: null });
           
@@ -342,13 +385,13 @@ export const useImageStore = create<ImageStore>()(
           
         } catch (error) {
           const errorMsg = AppErrorHandler.getErrorMessage(error);
-          logger.error(`Failed to cancel generation ${queueId}:`, error);
+          logger.error(`Failed to cancel generation ${queueId}:`, { error: String(error), queueId });
           set({ error: errorMsg, lastError: new Date() });
           throw error;
         }
       },
 
-      loadGalleryStats: async (type) => {
+      loadGalleryStats: async (type?: string): Promise<void> => {
         try {
           set({ statsLoading: true, error: null });
           
@@ -359,11 +402,11 @@ export const useImageStore = create<ImageStore>()(
             statsLoading: false 
           });
           
-          logger.info('Gallery stats loaded:', stats);
+          logger.info('Gallery stats loaded:', { stats });
           
         } catch (error) {
           const errorMsg = AppErrorHandler.getErrorMessage(error);
-          logger.error('Failed to load gallery stats:', error);
+          logger.error('Failed to load gallery stats:', { error: String(error) });
           set({ 
             statsLoading: false, 
             error: errorMsg,
@@ -372,70 +415,127 @@ export const useImageStore = create<ImageStore>()(
         }
       },
 
-      setFilters: (filters) => {
+      setFilters: (filters: Partial<ImageFilters>): void => {
         set((state) => ({
           currentFilters: { ...state.currentFilters, ...filters, page: 1 }
         }));
       },
 
-      resetFilters: () => {
+      resetFilters: (): void => {
         set({ currentFilters: defaultFilters });
       },
 
-      setViewMode: (mode) => {
+      setViewMode: (mode: 'grid' | 'list' | 'masonry'): void => {
         set({ viewMode: mode });
         logger.debug(`View mode changed to: ${mode}`);
       },
 
-      setPreferences: (preferences) => {
+      setPreferences: (preferences: Partial<ImageState['preferences']>): void => {
         set((state) => ({
           preferences: { ...state.preferences, ...preferences }
         }));
       },
 
-      clearError: () => {
+      clearError: (): void => {
         set({ error: null, lastError: null });
       },
 
-      setError: (error) => {
+      setError: (error: string): void => {
         set({ error, lastError: new Date() });
       },
 
+      // Compatibility methods for components
+      fetchImages: async (filters: Partial<ImageFilters> = {}): Promise<void> => {
+        await get().loadImages(filters);
+      },
+
+      downloadImage: async (image: GeneratedImage): Promise<void> => {
+        try {
+          const downloadUrl = ImageApi.getDownloadUrl(image.id);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = image.filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          logger.info(`Downloaded image: ${image.filename}`);
+        } catch (error) {
+          const errorMsg = AppErrorHandler.getErrorMessage(error);
+          logger.error('Failed to download image:', { error: String(error) });
+          get().setError(errorMsg);
+        }
+      },
+
+      updateFilters: (filters: Partial<ImageFilters>): void => {
+        const state = get();
+        const newFilters = { ...state.currentFilters, ...filters };
+        set({ 
+          currentFilters: newFilters,
+          filters: newFilters,
+          pagination: {
+            ...state.pagination,
+            current_page: newFilters.page || 1
+          }
+        });
+      },
+
+      loadMore: async (): Promise<void> => {
+        await get().loadMoreImages();
+      },
+
+      fetchQueue: async (): Promise<void> => {
+        await get().checkQueueStatus();
+      },
+
+      cancelQueueItem: async (queueId: number): Promise<void> => {
+        await get().cancelGeneration(queueId);
+      },
+
       // Utility methods
-      findImageById: (imageId) => {
+      findImageById: (imageId: number): GeneratedImage | null => {
         return get().images.find(img => img.id === imageId) || null;
       },
 
-      getImagesByType: (type) => {
+      getImagesByType: (type: string): GeneratedImage[] => {
         return get().images.filter(img => img.gallery_type === type);
       },
 
-      getTotalImageCount: () => {
+      getTotalImageCount: (): number => {
         return get().totalItems;
       },
 
-      clearAll: () => {
+      clearAll: (): void => {
         set({
           images: [],
           collections: [],
           featuredCollections: [],
           queueItems: [],
+          queue: [],
           generationQueue: [],
           galleryStats: null,
           selectedImage: null,
           currentFilters: defaultFilters,
+          filters: defaultFilters,
+          pagination: {
+            current_page: 1,
+            per_page: 20,
+            total_items: 0,
+            total_pages: 1,
+            has_more: false
+          },
           currentPage: 1,
           totalPages: 1,
           totalItems: 0,
           hasMore: false,
           error: null,
-          lastError: null
+          lastError: null,
+          queueError: null
         });
       }
     }),
     {
       name: APP_CONSTANTS.STORAGE.IMAGE_STORE_NAME || 'anime-prompt-gen-images',
-      partialize: (state) => ({
+      partialize: (state: ImageStore) => ({
         preferences: state.preferences,
         viewMode: state.viewMode,
         currentFilters: state.currentFilters

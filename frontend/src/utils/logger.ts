@@ -37,19 +37,26 @@ class Logger {
       ...context,
     };
 
-    switch (level) {
-      case LogLevel.DEBUG:
-        console.debug(`[${timestamp}] DEBUG: ${message}`, context);
-        break;
-      case LogLevel.INFO:
-        console.info(`[${timestamp}] INFO: ${message}`, context);
-        break;
-      case LogLevel.WARN:
-        console.warn(`[${timestamp}] WARN: ${message}`, context);
-        break;
-      case LogLevel.ERROR:
-        console.error(`[${timestamp}] ERROR: ${message}`, context);
-        break;
+    // Only log to console in development
+    if (this.isDevelopment) {
+      switch (level) {
+        case LogLevel.DEBUG:
+          // eslint-disable-next-line no-console
+          console.debug(`[${timestamp}] DEBUG: ${message}`, context);
+          break;
+        case LogLevel.INFO:
+          // eslint-disable-next-line no-console
+          console.info(`[${timestamp}] INFO: ${message}`, context);
+          break;
+        case LogLevel.WARN:
+          // eslint-disable-next-line no-console
+          console.warn(`[${timestamp}] WARN: ${message}`, context);
+          break;
+        case LogLevel.ERROR:
+          // eslint-disable-next-line no-console
+          console.error(`[${timestamp}] ERROR: ${message}`, context);
+          break;
+      }
     }
 
     // In production, you might want to send logs to a service
@@ -58,7 +65,7 @@ class Logger {
     }
   }
 
-  private sendToLoggingService(logEntry: any): void {
+  private sendToLoggingService(logEntry: Record<string, unknown>): void {
     // TODO: Implement logging service integration (e.g., Sentry, LogRocket)
     // For now, just store in sessionStorage for debugging
     try {
@@ -69,7 +76,7 @@ class Logger {
         logs.splice(0, logs.length - 100);
       }
       sessionStorage.setItem('app-logs', JSON.stringify(logs));
-    } catch (error) {
+    } catch {
       // Silently fail if sessionStorage is not available
     }
   }

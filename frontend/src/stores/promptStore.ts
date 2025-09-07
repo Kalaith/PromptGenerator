@@ -15,6 +15,14 @@ const convertApiPrompt = (apiPrompt: ApiPrompt): Prompt => ({
   timestamp: new Date(apiPrompt.created_at).getTime(),
 });
 
+// Helper to filter new prompts
+const filterNewPrompts = (convertedPrompts: Prompt[], existingPrompts: Prompt[]): Prompt[] =>
+  convertedPrompts.filter(p => !existingPrompts.some(existing => existing.id === p.id));
+
+// Helper to update history
+const updateHistoryWithNewPrompts = (currentHistory: Prompt[], newPrompts: Prompt[], shouldSave: boolean): Prompt[] =>
+  shouldSave ? [...currentHistory, ...newPrompts].slice(-APP_CONSTANTS.HISTORY.MAX_ITEMS) : currentHistory;
+
 interface PromptState {
   generatedPrompts: Prompt[];
   currentPrompt: Prompt | null;
@@ -46,7 +54,7 @@ type PromptStore = PromptState & PromptActions;
 
 export const usePromptStore = create<PromptStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       // State
       generatedPrompts: [],
       currentPrompt: null,
@@ -59,43 +67,44 @@ export const usePromptStore = create<PromptStore>()(
       },
 
       // Actions
-      addGeneratedPrompts: (apiPrompts) =>
+      addGeneratedPrompts: (apiPrompts: ApiPrompt[]): void =>
         set((state) => {
           const convertedPrompts = apiPrompts.map(convertApiPrompt);
-          const newPrompts = convertedPrompts.filter(
-            (p) => !state.generatedPrompts.some((existing) => existing.id === p.id)
+          const newPrompts = filterNewPrompts(convertedPrompts, state.generatedPrompts);
+          const updatedHistory = updateHistoryWithNewPrompts(
+            state.localHistory,
+            newPrompts,
+            state.localPreferences.saveHistory
           );
           return {
             generatedPrompts: [...state.generatedPrompts, ...newPrompts],
-            localHistory: state.localPreferences.saveHistory
-              ? [...state.localHistory, ...newPrompts].slice(-APP_CONSTANTS.HISTORY.MAX_ITEMS)
-              : state.localHistory,
+            localHistory: updatedHistory,
           };
         }),
 
-      setCurrentPrompt: (prompt) => set({ currentPrompt: prompt }),
+      setCurrentPrompt: (prompt: Prompt | null): void => set({ currentPrompt: prompt }),
 
       // Local state management (for offline fallback)
-      addToLocalFavorites: (promptId) =>
+      addToLocalFavorites: (promptId: string): void =>
         set((state) => ({
           localFavorites: state.localFavorites.includes(promptId)
             ? state.localFavorites
             : [...state.localFavorites, promptId],
         })),
 
-      removeFromLocalFavorites: (promptId) =>
+      removeFromLocalFavorites: (promptId: string): void =>
         set((state) => ({
           localFavorites: state.localFavorites.filter((id) => id !== promptId),
         })),
 
-      updateLocalPreferences: (newPreferences) =>
+      updateLocalPreferences: (newPreferences: Partial<PromptState['localPreferences']>): void =>
         set((state) => ({
           localPreferences: { ...state.localPreferences, ...newPreferences },
         })),
 
-      clearLocalHistory: () => set({ localHistory: [], generatedPrompts: [] }),
+      clearLocalHistory: (): void => set({ localHistory: [], generatedPrompts: [] }),
 
-      clearAll: () =>
+      clearAll: (): void =>
         set({
           generatedPrompts: [],
           localFavorites: [],
@@ -104,7 +113,7 @@ export const usePromptStore = create<PromptStore>()(
         }),
 
       // Utility methods
-      convertApiPrompts: (apiPrompts) => apiPrompts.map(convertApiPrompt),
+      convertApiPrompts: (apiPrompts: ApiPrompt[]): Prompt[] => apiPrompts.map(convertApiPrompt),
     }),
     {
       name: APP_CONSTANTS.STORAGE.STORE_NAME,

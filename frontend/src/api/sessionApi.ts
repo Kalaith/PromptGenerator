@@ -1,18 +1,18 @@
 import { apiClient } from './client';
-import type { UserSession } from './types';
+import type { SessionHistoryItem } from './types';
 
 export interface SessionResponse {
   session_id: string;
   favorites: string[];
-  history: any[];
-  preferences: Record<string, any>;
+  history: SessionHistoryItem[];
+  preferences: Record<string, unknown>;
 }
 
 export interface SessionActionResponse {
   success: boolean;
   favorites?: string[];
-  history?: any[];
-  preferences?: Record<string, any>;
+  history?: SessionHistoryItem[];
+  preferences?: Record<string, unknown>;
 }
 
 export class SessionApi {
@@ -51,7 +51,7 @@ export class SessionApi {
   // Add to history
   static async addToHistory(
     sessionId: string,
-    prompt: any
+    prompt: SessionHistoryItem
   ): Promise<SessionActionResponse> {
     return apiClient.post<SessionActionResponse>('/session/history/add', {
       session_id: sessionId,
@@ -69,7 +69,7 @@ export class SessionApi {
   // Update preferences
   static async updatePreferences(
     sessionId: string,
-    preferences: Record<string, any>
+    preferences: Record<string, unknown>
   ): Promise<SessionActionResponse> {
     return apiClient.post<SessionActionResponse>('/session/preferences', {
       session_id: sessionId,

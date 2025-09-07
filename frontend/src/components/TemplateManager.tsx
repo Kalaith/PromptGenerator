@@ -34,7 +34,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
             throw new Error('User authentication required to view personal templates');
           }
           default: {
-            loadedTemplates = await TemplateApi.getTemplates({ type });
+            loadedTemplates = await TemplateApi.getTemplates(type ? { type } : {});
             break;
           }
         }

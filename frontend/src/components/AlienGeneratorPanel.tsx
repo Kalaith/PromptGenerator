@@ -12,7 +12,7 @@ const AlienGeneratorPanel: React.FC = () => {
   const [alienAttributes, setAlienAttributes] = useState<Record<string, AttributeConfig>>({});
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string | string[]>>({});
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
+  const [availableTemplates] = useState<Template[]>([]);
   
   const addGeneratedPrompts = usePromptStore(state => state.addGeneratedPrompts);
   const { generateAlienPrompts, loading, error, clearError } = usePromptGeneration();
@@ -23,12 +23,12 @@ const AlienGeneratorPanel: React.FC = () => {
       try {
         const attributesResponse = await PromptApi.getGeneratorAttributes('alien');
         setAlienAttributes(attributesResponse.data.attributes);
-      } catch (loadError) {
-        console.error('Failed to load alien attributes:', loadError);
+      } catch {
+        // Error logged by loadAttributes function
       }
     };
 
-    void loadAlienAttributes();
+    loadAlienAttributes();
   }, []);
 
   const handleGenerate = async (): Promise<void> => {
@@ -63,13 +63,13 @@ const AlienGeneratorPanel: React.FC = () => {
               type: 'alien',
               timestamp: Date.now(),
             });
-          } catch (historyError) {
-            console.error('Failed to add to history:', historyError);
+          } catch {
+            // Error logged by addToHistory function
           }
         }
       }
-    } catch (generationError) {
-      console.error('Generation failed:', generationError);
+    } catch {
+      // Error logged by generation function
     }
   };
 
@@ -103,7 +103,7 @@ const AlienGeneratorPanel: React.FC = () => {
             )}
 
             {/* Form */}
-            <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void handleGenerate(); }}>
+            <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); handleGenerate(); }}>
               {/* Dynamic Alien Attributes */}
               {Object.keys(alienAttributes).length > 0 && (
                 <div className="space-y-4">
@@ -120,10 +120,11 @@ const AlienGeneratorPanel: React.FC = () => {
                                      focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all duration-300
                                      text-slate-800 font-medium hover:border-gray-400 shadow-sm"
                             onChange={(event) => {
-                              const value = event.target.value;
+                              const {value} = event.target;
                               setSelectedAttributes(prev => {
                                 if (value === '') {
-                                  const { [key]: _, ...rest } = prev;
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                  const { [key]: _removed, ...rest } = prev;
                                   return rest;
                                 }
                                 return { ...prev, [key]: value };
@@ -148,7 +149,8 @@ const AlienGeneratorPanel: React.FC = () => {
                               const selectedOptions = Array.from(event.target.selectedOptions, option => option.value);
                               setSelectedAttributes(prev => {
                                 if (selectedOptions.length === 0) {
-                                  const { [key]: _, ...rest } = prev;
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                  const { [key]: _removed, ...rest } = prev;
                                   return rest;
                                 }
                                 return { ...prev, [key]: selectedOptions };

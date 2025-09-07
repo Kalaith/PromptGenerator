@@ -11,7 +11,7 @@ export interface AppError {
   type: ErrorType;
   message: string;
   code?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -20,7 +20,7 @@ export class AppErrorHandler {
     type: ErrorType,
     message: string,
     code?: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): AppError {
     const error: AppError = {
       type,
@@ -39,24 +39,44 @@ export class AppErrorHandler {
     return error;
   }
 
-  static fromApiError(error: any): AppError {
+  static fromApiError(error: unknown): AppError {
+    const errorMessage = this.extractErrorMessage(error);
+    
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        return this.createError(ErrorType.TIMEOUT, 'Request timed out');
-      }
-      
-      if (error.message.includes('fetch')) {
-        return this.createError(ErrorType.NETWORK, 'Network error occurred');
-      }
-      
-      if (error.message.includes('API Error')) {
-        return this.createError(ErrorType.API, error.message);
-      }
+      return this.handleKnownError(error);
     }
     
     return this.createError(
       ErrorType.UNKNOWN,
-      error?.message || 'An unknown error occurred',
+      errorMessage,
+      undefined,
+      { originalError: error }
+    );
+  }
+
+  private static extractErrorMessage(error: unknown): string {
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String((error as { message: unknown }).message);
+    }
+    return 'An unknown error occurred';
+  }
+
+  private static handleKnownError(error: Error): AppError {
+    if (error.name === 'AbortError') {
+      return this.createError(ErrorType.TIMEOUT, 'Request timed out');
+    }
+    
+    if (error.message.includes('fetch')) {
+      return this.createError(ErrorType.NETWORK, 'Network error occurred');
+    }
+    
+    if (error.message.includes('API Error')) {
+      return this.createError(ErrorType.API, error.message);
+    }
+    
+    return this.createError(
+      ErrorType.UNKNOWN,
+      error.message || 'An unknown error occurred',
       undefined,
       { originalError: error }
     );
@@ -75,5 +95,15 @@ export class AppErrorHandler {
       default:
         return 'Something went wrong. Please try again.';
     }
+  }
+
+  static getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String((error as { message: unknown }).message);
+    }
+    return 'An unknown error occurred';
   }
 }

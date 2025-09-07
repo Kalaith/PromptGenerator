@@ -25,10 +25,13 @@ const TemplateCreator: React.FC = () => {
     
     // Set default type to first available generator type
     if (generatorTypes.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        type: generatorTypes[0].apiType
-      }));
+      const firstType = generatorTypes[0];
+      if (firstType) {
+        setFormData(prev => ({
+          ...prev,
+          type: firstType.apiType
+        }));
+      }
     }
   }, []);
 
@@ -49,7 +52,7 @@ const TemplateCreator: React.FC = () => {
       setFormData({
         name: '',
         description: '',
-        type: availableGeneratorTypes.length > 0 ? availableGeneratorTypes[0].apiType : 'anime',
+        type: availableGeneratorTypes.length > 0 && availableGeneratorTypes[0] ? availableGeneratorTypes[0].apiType : 'anime',
         template_data: {},
         is_public: false,
         created_by: 'user',

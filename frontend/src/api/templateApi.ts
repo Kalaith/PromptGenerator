@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse } from './client';
+import { apiClient } from './client';
 import type {
   Template,
   CreateTemplateRequest,
@@ -26,19 +26,36 @@ export class TemplateApi {
    * Get all templates with optional filters
    */
   static async getTemplates(filters?: TemplateFilters): Promise<Template[]> {
-    const params = new URLSearchParams();
-    
-    if (filters?.type) params.append('type', filters.type);
-    if (filters?.public_only !== undefined) params.append('public_only', String(filters.public_only));
-    if (filters?.created_by) params.append('created_by', filters.created_by);
-    if (filters?.order_by) params.append('order_by', filters.order_by);
-    if (filters?.order_direction) params.append('order_direction', filters.order_direction);
-
-    const query = params.toString();
-    const endpoint = `/templates${query ? `?${query}` : ''}`;
+    const params = this.buildTemplateParams(filters);
+    const endpoint = this.buildTemplateEndpoint('/templates', params);
     
     const response = await apiClient.get<TemplatesResponse>(endpoint);
     return response.templates;
+  }
+
+  /**
+   * Build URL search parameters from template filters
+   */
+  private static buildTemplateParams(filters?: TemplateFilters): URLSearchParams {
+    const params = new URLSearchParams();
+    
+    if (!filters) return params;
+    
+    if (filters.type) params.append('type', filters.type);
+    if (filters.public_only !== undefined) params.append('public_only', String(filters.public_only));
+    if (filters.created_by) params.append('created_by', filters.created_by);
+    if (filters.order_by) params.append('order_by', filters.order_by);
+    if (filters.order_direction) params.append('order_direction', filters.order_direction);
+
+    return params;
+  }
+
+  /**
+   * Build endpoint URL with query parameters
+   */
+  private static buildTemplateEndpoint(basePath: string, params: URLSearchParams): string {
+    const query = params.toString();
+    return `${basePath}${query ? `?${query}` : ''}`;
   }
 
   /**
@@ -80,9 +97,7 @@ export class TemplateApi {
     if (type) params.append('type', type);
     params.append('limit', String(limit));
 
-    const query = params.toString();
-    const endpoint = `/templates/popular${query ? `?${query}` : ''}`;
-    
+    const endpoint = this.buildTemplateEndpoint('/templates/popular', params);
     const response = await apiClient.get<TemplatesResponse>(endpoint);
     return response.templates;
   }
@@ -95,9 +110,7 @@ export class TemplateApi {
     if (type) params.append('type', type);
     params.append('limit', String(limit));
 
-    const query = params.toString();
-    const endpoint = `/templates/recent${query ? `?${query}` : ''}`;
-    
+    const endpoint = this.buildTemplateEndpoint('/templates/recent', params);
     const response = await apiClient.get<TemplatesResponse>(endpoint);
     return response.templates;
   }

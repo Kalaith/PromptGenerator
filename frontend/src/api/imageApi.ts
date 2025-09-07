@@ -39,7 +39,7 @@ export class ImageApi {
   }
 
   static async cancelImageGeneration(queueId: number): Promise<void> {
-    const response = await apiClient.delete<ApiResponse<any>>(`/images/queue/${queueId}`);
+    const response = await apiClient.delete<ApiResponse<Record<string, unknown>>>(`/images/queue/${queueId}`);
     
     if (!response.success) {
       throw new Error(response.message || 'Failed to cancel image generation');

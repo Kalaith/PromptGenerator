@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse } from './client';
+import { apiClient } from './client';
 
 export interface DescriptionTemplate {
   id: number;

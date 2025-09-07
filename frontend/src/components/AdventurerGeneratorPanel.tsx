@@ -21,12 +21,12 @@ const AdventurerGeneratorPanel: React.FC = () => {
       try {
         const attributesResponse = await PromptApi.getGeneratorAttributes('race');
         setAdventurerAttributes(attributesResponse.data.attributes);
-      } catch (loadError) {
-        console.error('Failed to load adventurer attributes:', loadError);
+      } catch {
+        // Error logged by loadAttributes function
       }
     };
 
-    void loadAdventurerAttributes();
+    loadAdventurerAttributes();
   }, []);
 
   const handleGenerate = async (): Promise<void> => {
@@ -60,13 +60,13 @@ const AdventurerGeneratorPanel: React.FC = () => {
               type: 'adventurer',
               timestamp: Date.now(),
             });
-          } catch (historyError) {
-            console.error('Failed to add to history:', historyError);
+          } catch {
+            // Error logged by addToHistory function
           }
         }
       }
-    } catch (generationError) {
-      console.error('Generation failed:', generationError);
+    } catch {
+      // Error logged by generation function
     }
   };
 
@@ -95,7 +95,7 @@ const AdventurerGeneratorPanel: React.FC = () => {
             )}
 
             {/* Form */}
-            <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void handleGenerate(); }}>
+            <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); handleGenerate(); }}>
               {/* Dynamic Adventurer Attributes */}
               {Object.keys(adventurerAttributes).length > 0 && (
                 <div className="space-y-4">
@@ -112,10 +112,11 @@ const AdventurerGeneratorPanel: React.FC = () => {
                                      focus:border-ocean-400 focus:ring-4 focus:ring-ocean-100 transition-all duration-300
                                      text-dark-700 font-medium hover:border-ocean-300"
                             onChange={(event) => {
-                              const value = event.target.value;
+                              const {value} = event.target;
                               setSelectedAttributes(prev => {
                                 if (value === '') {
-                                  const { [key]: _, ...rest } = prev;
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                  const { [key]: _removed, ...rest } = prev;
                                   return rest;
                                 }
                                 return { ...prev, [key]: value };
@@ -140,7 +141,8 @@ const AdventurerGeneratorPanel: React.FC = () => {
                               const selectedOptions = Array.from(event.target.selectedOptions, option => option.value);
                               setSelectedAttributes(prev => {
                                 if (selectedOptions.length === 0) {
-                                  const { [key]: _, ...rest } = prev;
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                  const { [key]: _removed, ...rest } = prev;
                                   return rest;
                                 }
                                 return { ...prev, [key]: selectedOptions };

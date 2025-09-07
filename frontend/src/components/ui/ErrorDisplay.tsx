@@ -2,7 +2,8 @@ import React from 'react';
 import { AppError, ErrorType } from '../../types/errors';
 
 interface ErrorDisplayProps {
-  error: AppError | null;
+  error?: AppError | null;
+  message?: string;
   onDismiss?: () => void;
   variant?: 'inline' | 'toast' | 'modal';
   size?: 'sm' | 'md' | 'lg';
@@ -10,11 +11,19 @@ interface ErrorDisplayProps {
 
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   error,
+  message,
   onDismiss,
   variant = 'inline',
   size = 'md',
 }) => {
-  if (!error) return null;
+  // Handle both error object and simple string message
+  const displayError = error || (message ? {
+    type: ErrorType.UNKNOWN,
+    message,
+    timestamp: new Date()
+  } as AppError : null);
+
+  if (!displayError) return null;
 
   const getErrorIcon = (type: ErrorType): string => {
     switch (type) {
@@ -72,7 +81,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   };
 
   const baseClass = `
-    ${getErrorSeverityClass(error.type)}
+    ${getErrorSeverityClass(displayError.type)}
     ${getSizeClass(size)}
     ${getVariantClass(variant)}
     border rounded-xl flex items-start gap-3 animate-fade-in
@@ -80,19 +89,19 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
   const content = (
     <div className={baseClass} role="alert" aria-live="assertive">
-      <span className="text-xl flex-shrink-0">{getErrorIcon(error.type)}</span>
+      <span className="text-xl flex-shrink-0">{getErrorIcon(displayError.type)}</span>
       <div className="flex-1">
-        <div className="font-medium">{error.message}</div>
-        {error.details && (
+        <div className="font-medium">{displayError.message}</div>
+        {displayError.details && (
           <div className="text-sm mt-1 opacity-75">
-            {typeof error.details === 'string' 
-              ? error.details 
-              : JSON.stringify(error.details, null, 2)
+            {typeof displayError.details === 'string' 
+              ? displayError.details 
+              : JSON.stringify(displayError.details, null, 2)
             }
           </div>
         )}
-        {error.code && (
-          <div className="text-xs mt-2 opacity-50">Error Code: {error.code}</div>
+        {displayError.code && (
+          <div className="text-xs mt-2 opacity-50">Error Code: {displayError.code}</div>
         )}
       </div>
       {onDismiss && (

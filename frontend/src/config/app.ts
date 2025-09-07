@@ -27,7 +27,7 @@ class ConfigManager {
   }
 
   private loadConfig(): AppConfig {
-    const env = (import.meta as any).env;
+    const env = import.meta.env;
     
     return {
       api: {
@@ -62,7 +62,7 @@ class ConfigManager {
   }
 
   private getEnvValue(keys: string[], defaultValue: string): string {
-    const env = (import.meta as any).env;
+    const env = import.meta.env;
     for (const key of keys) {
       if (env[key]) {
         return env[key];

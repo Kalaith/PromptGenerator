@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, X, RefreshCw, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { useImageStore } from '../../stores/imageStore';
-import type { ImageQueueItem } from '../../api/types';
+import type { QueueStatusItem } from '../../api/types';
 
 interface ImageQueueProps {
   className?: string;
@@ -22,25 +22,29 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
     cancelQueueItem,
   } = useImageStore();
 
-  const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
+  const [refreshTimer, setRefreshTimer] = useState<number | null>(null);
 
   useEffect(() => {
     // Initial load
     fetchQueue();
 
+    let timer: number | null = null;
+    
     // Set up auto-refresh if enabled
     if (autoRefresh && refreshInterval > 0) {
-      const timer = setInterval(() => {
+      timer = window.setInterval(() => {
         fetchQueue();
       }, refreshInterval);
       
       setRefreshTimer(timer);
-      
-      return () => {
-        clearInterval(timer);
-      };
     }
-  }, [autoRefresh, refreshInterval]);
+    
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [autoRefresh, refreshInterval, fetchQueue]);
 
   const handleManualRefresh = () => {
     fetchQueue();
@@ -51,7 +55,7 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
       await cancelQueueItem(queueId);
       fetchQueue(); // Refresh after cancellation
     } catch (error) {
-      console.error('Failed to cancel queue item:', error);
+      // Error logged by cancelQueueItem function
     }
   };
 
@@ -89,8 +93,8 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
     }
   };
 
-  const pendingCount = queue.filter(item => item.status === 'pending').length;
-  const processingCount = queue.filter(item => item.status === 'processing').length;
+  const pendingCount = queue.filter((item: QueueStatusItem) => item.status === 'pending').length;
+  const processingCount = queue.filter((item: QueueStatusItem) => item.status === 'processing').length;
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
@@ -164,7 +168,7 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
         {/* Queue Items */}
         {queue.length > 0 && (
           <div className="space-y-3">
-            {queue.map((item) => (
+            {queue.map((item: QueueStatusItem) => (
               <div
                 key={item.id}
                 className={`border rounded-lg p-3 transition-all ${getStatusColor(item.status)}`}
@@ -181,17 +185,19 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-gray-600">Dimensions:</span>
-                        <span className="ml-1 font-medium">{item.width}×{item.height}</span>
-                      </div>
+                    <div className="text-sm">
                       <div>
                         <span className="text-gray-600">Requested:</span>
                         <span className="ml-1 font-medium">
                           {new Date(item.created_at).toLocaleTimeString()}
                         </span>
                       </div>
+                      {item.queue_position && (
+                        <div>
+                          <span className="text-gray-600">Queue Position:</span>
+                          <span className="ml-1 font-medium">#{item.queue_position}</span>
+                        </div>
+                      )}
                     </div>
 
                     {item.error_message && (
@@ -200,10 +206,10 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
                       </div>
                     )}
 
-                    {item.estimated_completion_time && item.status === 'processing' && (
+                    {item.estimated_completion && item.status === 'processing' && (
                       <div className="mt-2 text-sm text-blue-600">
                         <strong>Estimated completion:</strong>{' '}
-                        {new Date(item.estimated_completion_time).toLocaleTimeString()}
+                        {new Date(item.estimated_completion).toLocaleTimeString()}
                       </div>
                     )}
                   </div>
@@ -239,7 +245,7 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
         )}
 
         {/* Auto-refresh indicator */}
-        {autoRefresh && queue.some(item => ['pending', 'processing'].includes(item.status)) && (
+        {autoRefresh && queue.some((item: QueueStatusItem) => ['pending', 'processing'].includes(item.status)) && (
           <div className="mt-4 pt-3 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
               <RefreshCw size={12} />
