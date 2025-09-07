@@ -12,7 +12,7 @@ import { GalleryPage } from './pages/GalleryPage';
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || '/'}>
       <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-violet-50 text-slate-900 font-sans">
         {/* Background decorative elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">

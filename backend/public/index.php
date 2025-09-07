@@ -30,8 +30,12 @@ $container = $containerBuilder->build();
 AppFactory::setContainer($container);
 $app = AppFactory::create();
 
+// Set the base path for proper routing when accessed via rewrite rules
+$app->setBasePath('/anime_prompt_gen');
+
 // Add middleware
 $app->addBodyParsingMiddleware();
+$app->addRoutingMiddleware(); // Add routing middleware
 $app->addErrorMiddleware(true, true, true);
 
 // CORS Middleware

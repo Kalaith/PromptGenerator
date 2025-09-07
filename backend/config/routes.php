@@ -167,6 +167,14 @@ return function (App $app) {
     $app->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
     $app->get('/aliens/climates', [AlienController::class, 'getClimates']);
     
+    // User session routes (direct access)
+    $app->get('/session', [UserSessionController::class, 'getSession']);
+    $app->post('/session/favorites/add', [UserSessionController::class, 'addToFavorites']);
+    $app->post('/session/favorites/remove', [UserSessionController::class, 'removeFromFavorites']);
+    $app->post('/session/history/add', [UserSessionController::class, 'addToHistory']);
+    $app->post('/session/history/clear', [UserSessionController::class, 'clearHistory']);
+    $app->post('/session/preferences', [UserSessionController::class, 'updatePreferences']);
+    
     // Attribute configuration management (direct access)
     $app->get('/attribute-config', [AttributeConfigController::class, 'getConfigs']);
     $app->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);

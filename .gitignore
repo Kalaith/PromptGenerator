@@ -8,3 +8,5 @@ service/logs/service.log
 .gitignore
 service/logs/service.pid
 frontend/.env.production
+backend/.env.preview
+nul
