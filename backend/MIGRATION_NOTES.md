@@ -7,7 +7,7 @@ This document outlines the migration performed to bring the anime prompt generat
 
 ### 1. Mixed Database Connections ✅ FIXED
 **Problem**: The backend was using both PDO (raw SQL) and Eloquent ORM inconsistently
-- `GameAssetRepository` used raw PDO queries
+- Various repositories used raw PDO queries
 - Other repositories used Eloquent ORM
 
 **Solution**: 
@@ -17,19 +17,19 @@ This document outlines the migration performed to bring the anime prompt generat
 
 ### 2. Database Schema Duplication ✅ FIXED
 **Problem**: Multiple tables contained overlapping data
-- `game_assets` and `attributes` both stored categorical data
+- Multiple tables stored similar categorical data
 - `species` and `alien_species` had similar but different schemas
-- Race data was duplicated between `game_assets` and existing species tables
+- Race data was duplicated across different tables
 
 **Solution**:
-- Created normalized schema migration: `normalize_game_data_schema.sql`
-- Consolidated `attributes` → `game_attributes` with enhanced schema
-- Created `unified_species` table to replace both `species` and `alien_species`
-- Maintained backward compatibility with views
+- Consolidated all categorical data into single `attributes` table
+- Created `unified_species` table to replace multiple species tables
+- Eliminated redundant tables (`adventurers`, `game_assets`)
+- All game data now unified in `attributes` table
 
 ### 3. Controllers Not Following Standards ✅ FIXED
 **Problem**: Controllers contained business logic instead of being thin HTTP handlers
-- `GameAssetsController` had complex repository logic
+- Controllers had complex repository logic
 - Missing proper Actions pattern implementation
 
 **Solution**:

@@ -1,22 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { getGeneratorTypes } from '../config/generatorTypes';
+import { config } from '../config/app';
+
+interface GeneratorType {
+  name: string;
+  display_name: string;
+  route_key: string;
+  endpoint: string;
+  is_active: boolean;
+  sort_order: number;
+}
 
 const RouterHeader: React.FC = () => {
   const location = useLocation();
+  const [generatorTypes, setGeneratorTypes] = useState<GeneratorType[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Get dynamic generator types plus static admin pages
-  const generatorTypes = getGeneratorTypes();
-  const navItems = [
-    // Dynamic generator types
-    ...generatorTypes.map(type => ({
-      path: `/${type.slug}`,
-      label: type.name,
-      icon: type.icon
-    })),
-    // Static admin pages
+  useEffect(() => {
+    const fetchGeneratorTypes = async () => {
+      try {
+        const apiBaseUrl = config.getApi().baseUrl;
+        const response = await fetch(`${apiBaseUrl}/generator-types`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setGeneratorTypes(data.data.generator_types || []);
+        }
+      } catch (err) {
+        console.error('Error fetching generator types:', err);
+        // Fallback to empty array if API fails
+        setGeneratorTypes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGeneratorTypes();
+  }, []);
+
+  // Static admin pages
+  const staticNavItems = [
     { path: '/gallery', label: 'Gallery', icon: '🖼️' },
     { path: '/templates', label: 'Templates', icon: '📝' },
     { path: '/description-templates', label: 'Description Templates', icon: '📖' },
@@ -24,6 +49,31 @@ const RouterHeader: React.FC = () => {
     { path: '/attribute-options', label: 'Attribute Options', icon: '🎯' },
     { path: '/generator-types', label: 'Generator Types', icon: '🔧' },
   ];
+
+  // Get dynamic generator types plus static admin pages
+  const navItems = [
+    // Dynamic generator types - only show if loaded and not loading
+    ...(!loading ? generatorTypes.map(type => ({
+      path: `/${type.route_key}`,
+      label: type.display_name,
+      icon: getGeneratorTypeIcon(type.name) // We'll need to create this helper
+    })) : []),
+    // Static admin pages
+    ...staticNavItems,
+  ];
+
+  // Helper function to get icon for generator type
+  function getGeneratorTypeIcon(typeName: string): string {
+    const iconMap: Record<string, string> = {
+      'kemonomimi': '🐱',
+      'monster-girl': '👾', 
+      'monster': '👹',
+      'adventurer': '⚔️',
+      'alien': '👽',
+      'anime': '✨'
+    };
+    return iconMap[typeName] || '🎭';
+  }
 
   return (
     <header className="relative">

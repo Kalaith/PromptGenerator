@@ -283,10 +283,22 @@ class GeneratedImage extends Model
     }
 
     /**
-     * Get all valid gallery types
+     * Get all valid gallery types from database
      */
     public static function getValidGalleryTypes(): array
     {
+        // Get dynamic gallery types from generator_types table
+        try {
+            $generatorTypes = \AnimePromptGen\Models\GeneratorType::getActiveTypeNames();
+            
+            if (!empty($generatorTypes)) {
+                return $generatorTypes;
+            }
+        } catch (\Exception $e) {
+            // Log error if needed
+        }
+
+        // Fallback to constants if database query fails
         return [
             self::GALLERY_ANIME,
             self::GALLERY_ALIEN,

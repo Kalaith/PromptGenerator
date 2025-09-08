@@ -31,7 +31,7 @@ final class SpeciesRepository
 
     public function getRandomByType(string $type): ?Species
     {
-        return Species::active()->byType($type)->inRandomOrder()->first();
+        return Species::getRandomByType($type);
     }
 
     public function getAllActive(): Collection

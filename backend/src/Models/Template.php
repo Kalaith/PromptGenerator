@@ -109,15 +109,17 @@ class Template extends Model
             return $errors;
         }
 
-        if ($this->type === 'anime') {
-            // Validate anime template structure
+        // Get valid fields based on generator type from generator_types table
+        $generatorType = \AnimePromptGen\Models\GeneratorType::where('name', $this->type)->first();
+        
+        if ($generatorType) {
+            // Use a more flexible validation system based on the generator type
             $requiredFields = [];
-            $optionalFields = ['species', 'traits', 'style_modifiers', 'negative_prompts', 'gender', 'outfit'];
-            
-        } elseif ($this->type === 'alien') {
-            // Validate alien template structure  
+            $optionalFields = $this->getValidFieldsForGeneratorType($this->type);
+        } else {
+            // Fallback for unknown types
             $requiredFields = [];
-            $optionalFields = ['species_class', 'traits', 'climate', 'environment', 'style_modifiers', 'negative_prompts', 'gender'];
+            $optionalFields = ['species', 'traits', 'style_modifiers', 'negative_prompts', 'gender'];
         }
 
         // Check that template only contains valid fields
@@ -129,6 +131,24 @@ class Template extends Model
         }
 
         return $errors;
+    }
+
+    /**
+     * Get valid fields for a specific generator type
+     */
+    private function getValidFieldsForGeneratorType(string $generatorType): array
+    {
+        // Define valid fields for each generator type
+        $validFieldsMap = [
+            'anime' => ['species', 'traits', 'style_modifiers', 'negative_prompts', 'gender', 'outfit'],
+            'alien' => ['species_class', 'traits', 'climate', 'environment', 'style_modifiers', 'negative_prompts', 'gender'],
+            'kemonomimi' => ['species', 'traits', 'style_modifiers', 'negative_prompts', 'gender', 'outfit'],
+            'monster-girl' => ['species', 'traits', 'style_modifiers', 'negative_prompts', 'gender', 'outfit'],
+            'monster' => ['type', 'traits', 'environment', 'style_modifiers', 'negative_prompts'],
+            'adventurer' => ['race', 'class', 'experience', 'environment', 'style_modifiers', 'negative_prompts', 'gender'],
+        ];
+
+        return $validFieldsMap[$generatorType] ?? ['species', 'traits', 'style_modifiers', 'negative_prompts', 'gender'];
     }
 
     /**

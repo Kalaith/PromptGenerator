@@ -15,6 +15,7 @@ use AnimePromptGen\Controllers\AnimeAttributesController;
 use AnimePromptGen\Controllers\GeneratorAttributesController;
 use AnimePromptGen\Controllers\AttributeConfigController;
 use AnimePromptGen\Controllers\AttributeCategoryController;
+use AnimePromptGen\Controllers\GeneratorTypesController;
 use AnimePromptGen\Controllers\ImageController;
 use AnimePromptGen\Controllers\ImageQueueController;
 
@@ -49,6 +50,13 @@ return function (App $app) {
         // Species routes
         $group->get('/species', [SpeciesController::class, 'getAll']);
         $group->get('/species/types', [SpeciesController::class, 'getTypes']);
+        
+        // Generator types routes
+        $group->get('/generator-types', [GeneratorTypesController::class, 'getAll']);
+        $group->get('/generator-types/names', [GeneratorTypesController::class, 'getNames']);
+        $group->post('/generator-types', [GeneratorTypesController::class, 'create']);
+        $group->put('/generator-types/{id}', [GeneratorTypesController::class, 'update']);
+        $group->delete('/generator-types/{id}', [GeneratorTypesController::class, 'delete']);
         
         // Generic attributes route (replaces specific routes)
         $group->get('/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
@@ -124,6 +132,12 @@ return function (App $app) {
     });
     
     // Direct routes (without API prefix) for backward compatibility and direct browser access
+    $app->get('/generator-types', [GeneratorTypesController::class, 'getAll']);
+    $app->get('/generator-types/names', [GeneratorTypesController::class, 'getNames']);
+    $app->post('/generator-types', [GeneratorTypesController::class, 'create']);
+    $app->put('/generator-types/{id}', [GeneratorTypesController::class, 'update']);
+    $app->delete('/generator-types/{id}', [GeneratorTypesController::class, 'delete']);
+    
     $app->get('/templates', [TemplateController::class, 'getAll']);
     $app->get('/templates/popular', [TemplateController::class, 'getPopular']);
     $app->get('/templates/recent', [TemplateController::class, 'getRecent']);

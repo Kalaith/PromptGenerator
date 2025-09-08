@@ -14,6 +14,8 @@ use AnimePromptGen\Controllers\AnimeAttributesController;
 use AnimePromptGen\Controllers\GeneratorAttributesController;
 use AnimePromptGen\Controllers\AttributeConfigController;
 use AnimePromptGen\Controllers\AttributeCategoryController;
+use AnimePromptGen\Controllers\GeneratorTypesController;
+use AnimePromptGen\External\GeneratorTypeRepository;
 use AnimePromptGen\Actions\GetAnimeAttributesAction;
 use AnimePromptGen\Actions\GetAttributeCategoriesAction;
 use AnimePromptGen\Actions\GetAttributeOptionsByCategoryAction;
@@ -57,6 +59,7 @@ return [
     DescriptionTemplateRepository::class => \DI\autowire(),
     GameAttributeRepository::class => \DI\autowire(),
     UnifiedSpeciesRepository::class => \DI\autowire(),
+    GeneratorTypeRepository::class => \DI\autowire(),
 
     // Services
     RandomGeneratorService::class => \DI\autowire(),
@@ -93,4 +96,5 @@ return [
     GeneratorAttributesController::class => \DI\autowire(),
     AttributeConfigController::class => \DI\autowire(),
     AttributeCategoryController::class => \DI\autowire(),
+    GeneratorTypesController::class => \DI\autowire(),
 ];

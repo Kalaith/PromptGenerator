@@ -1,5 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NewAttributeData, AttributeConfig } from './types';
+import { config } from '../../config/app';
+
+interface GeneratorType {
+  name: string;
+  display_name: string;
+  route_key: string;
+  is_active: boolean;
+}
 
 interface AttributeFormProps {
   newAttribute: NewAttributeData;
@@ -14,6 +22,33 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   onSubmit,
   onCancel
 }) => {
+  const [generatorTypes, setGeneratorTypes] = useState<GeneratorType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchGeneratorTypes = async () => {
+      try {
+        const apiBaseUrl = config.getApi().baseUrl;
+        const response = await fetch(`${apiBaseUrl}/generator-types`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setGeneratorTypes(data.data.generator_types || []);
+        } else {
+          setError('Failed to load generator types');
+        }
+      } catch (err) {
+        setError('Error fetching generator types');
+        console.error('Error fetching generator types:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGeneratorTypes();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
@@ -84,17 +119,25 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Generator Types:</label>
           <div className="space-y-2">
-            {['anime', 'alien', 'race', 'monster', 'monsterGirl', 'animalGirl'].map(type => (
-              <label key={type} className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="generatorTypes"
-                  value={type}
-                  className="rounded border-gray-300 text-indigo-600 shadow-sm"
-                />
-                <span className="ml-2">{type}</span>
-              </label>
-            ))}
+            {loading ? (
+              <div className="text-gray-500">Loading generator types...</div>
+            ) : error ? (
+              <div className="text-red-500">{error}</div>
+            ) : generatorTypes.length === 0 ? (
+              <div className="text-gray-500">No generator types available</div>
+            ) : (
+              generatorTypes.map(type => (
+                <label key={type.name} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="generatorTypes"
+                    value={type.name}
+                    className="rounded border-gray-300 text-indigo-600 shadow-sm"
+                  />
+                  <span className="ml-2">{type.display_name}</span>
+                </label>
+              ))
+            )}
           </div>
         </div>
 

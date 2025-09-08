@@ -46,13 +46,23 @@ class ApiClient {
   ): Promise<Response> {
     const url = `${this.config.baseUrl}${endpoint}`;
     
+    // Use simple request headers to avoid preflight OPTIONS
+    const headers: Record<string, string> = {};
+    
+    // Only add Content-Type for requests with body
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
+    
+    // Add other headers if specified
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
+    
     return fetch(url, {
       ...options,
       signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
   }
 

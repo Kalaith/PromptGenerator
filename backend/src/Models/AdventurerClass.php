@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnimePromptGen\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class AdventurerClass extends Model
 {
@@ -25,10 +24,6 @@ final class AdventurerClass extends Model
         'updated_at' => 'datetime'
     ];
 
-    public function adventurers(): HasMany
-    {
-        return $this->hasMany(Adventurer::class, 'class_id');
-    }
 
     public function scopeActive($query)
     {

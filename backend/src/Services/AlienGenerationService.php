@@ -8,7 +8,7 @@ use AnimePromptGen\External\AlienSpeciesRepository;
 use AnimePromptGen\External\AlienTraitRepository;
 use AnimePromptGen\External\AttributeRepository;
 use AnimePromptGen\External\DescriptionTemplateRepository;
-use AnimePromptGen\Models\AlienSpecies;
+use AnimePromptGen\Models\UnifiedSpecies;
 use AnimePromptGen\Models\AlienTrait;
 
 final class AlienGenerationService extends BaseGenerationService
@@ -103,7 +103,7 @@ final class AlienGenerationService extends BaseGenerationService
         ];
     }
 
-    private function getSpeciesForGeneration(?string $class): ?AlienSpecies
+    private function getSpeciesForGeneration(?string $class): ?UnifiedSpecies
     {
         if (!$class) {
             $availableClasses = $this->alienSpeciesRepository->getAllClasses();
@@ -180,7 +180,7 @@ final class AlienGenerationService extends BaseGenerationService
     }
 
     private function generateAlienDescription(
-        AlienSpecies $species,
+        UnifiedSpecies $species,
         string $gender,
         string $climate,
         string $style,
@@ -195,8 +195,8 @@ final class AlienGenerationService extends BaseGenerationService
             ? $this->randomGenerator->getRandomElements($species->visual_descriptors, 2) 
             : [];
         
-        $variation = $species->variations && count($species->variations) > 0
-            ? $this->randomGenerator->getRandomElement($species->variations) ?? 'standard'
+        $variation = $species->physical_features && count($species->physical_features) > 0
+            ? $this->randomGenerator->getRandomElement($species->physical_features) ?? 'standard'
             : 'standard';
 
         // Get trait visuals
@@ -216,7 +216,7 @@ final class AlienGenerationService extends BaseGenerationService
         $template = "Portrait of a {gender} {class} alien from a {climate} world, depicted in a {artisticStyle} style. {variation} variation. Physical features: {physicalFeatures}. Hair: {hairStyle} {hairColor} hair. Eyes: {eyeColor} eyes that {eyeExpression}. Facial features include {facialFeatures}. Wearing {clothing} with {accessory}. Visual details: {visualDetails}. The alien {posTraitVisual} and {negTraitVisual}, {pose} in {environment}. Holding a {artifact}. Style elements: {aiPromptElements}.";
 
         $replacements = array_merge($attributes, [
-            'class' => $species->class,
+            'class' => $species->category,
             'climate' => $climate,
             'variation' => $variation,
             'physicalFeatures' => implode(', ', $physicalFeatures),

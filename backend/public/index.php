@@ -32,21 +32,21 @@ $container = new Container();
 AppFactory::setContainer($container);
 $app = AppFactory::create();
 
-// Set base path for rewrite rules
-$app->setBasePath('/anime_prompt_gen');
-
-// Middleware
-$app->addBodyParsingMiddleware();
-$app->addRoutingMiddleware();
-
-// CORS Middleware
+// CORS Middleware - Simple headers only for actual requests
 $app->add(function ($request, $handler) {
     $response = $handler->handle($request);
     return $response
-        ->withHeader('Access-Control-Allow-Origin', $_ENV['CORS_ALLOWED_ORIGINS'] ?? '*')
-        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        ->withHeader('Access-Control-Allow-Origin', '*')
+        ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
 });
+
+// Set base path for rewrite rules (comment out for development)
+// $app->setBasePath('/anime_prompt_gen');
+
+// Other Middleware
+$app->addBodyParsingMiddleware();
+$app->addRoutingMiddleware();
 
 // Error Middleware
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);

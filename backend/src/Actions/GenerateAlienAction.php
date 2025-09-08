@@ -45,7 +45,7 @@ final class GenerateAlienAction
                 $prompt = Prompt::create([
                     'title' => sprintf(
                         '%s Alien (%s World, %s)',
-                        $promptData['species']->class ?? 'Unknown',
+                        $promptData['species']->category ?? 'Unknown',
                         $promptData['climate'] ?? 'Unknown',
                         $promptData['style'] ?? 'Unknown'
                     ),
