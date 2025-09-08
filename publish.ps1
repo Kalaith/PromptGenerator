@@ -159,24 +159,17 @@ function Build-Frontend {
     Write-Info "Building frontend for production..."
     $env:NODE_ENV = "production"
     
-    # Build with appropriate mode - let .env files handle VITE_BASE_PATH
+    # Set base path based on environment
     if ($Production) {
-        # Production mode - will use .env.production if it exists, otherwise defaults
-        Write-Info "Building with production mode (will use .env.production for base path)..."
-        tsc -b
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "TypeScript compilation failed"
-            return $false
-        }
+        # Production uses subdirectory path
+        Write-Info "Setting base path for production environment..."
+        $env:VITE_BASE_PATH = "/$PROJECT_NAME/"
         npx vite build --mode production
     } else {
-        # Preview mode - will use .env.preview
-        Write-Info "Building with preview mode (will use .env.preview for base path)..."
-        tsc -b
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "TypeScript compilation failed"
-            return $false
-        }
+        # Preview uses subdirectory path 
+        Write-Info "Setting base path for preview environment..."
+        $env:VITE_BASE_PATH = "/$PROJECT_NAME/"
+        # Build with preview mode to use .env.preview
         npx vite build --mode preview
     }
     
