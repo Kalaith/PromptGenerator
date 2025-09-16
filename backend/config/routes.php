@@ -18,6 +18,8 @@ use AnimePromptGen\Controllers\AttributeCategoryController;
 use AnimePromptGen\Controllers\GeneratorTypesController;
 use AnimePromptGen\Controllers\ImageController;
 use AnimePromptGen\Controllers\ImageQueueController;
+use AnimePromptGen\Controllers\Auth0Controller;
+use AnimePromptGen\Middleware\Auth0Middleware;
 
 return function (App $app) {
     // API base path
@@ -39,7 +41,17 @@ return function (App $app) {
         $group->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
         $group->get('/aliens/climates', [AlienController::class, 'getClimates']);
         
-        // User session routes (for favorites, history, preferences)
+        // Auth0 endpoints
+        $group->group('/auth0', function ($auth) {
+            $auth->post('/verify', [Auth0Controller::class, 'verifyUser'])->add(new Auth0Middleware());
+            $auth->get('/me', [Auth0Controller::class, 'getCurrentUser'])->add(new Auth0Middleware());
+            $auth->get('/validate', [Auth0Controller::class, 'validateSession'])->add(new Auth0Middleware());
+            $auth->put('/preferences', [Auth0Controller::class, 'updatePreferences'])->add(new Auth0Middleware());
+            $auth->get('/favorites', [Auth0Controller::class, 'getFavorites'])->add(new Auth0Middleware());
+            $auth->get('/history', [Auth0Controller::class, 'getHistory'])->add(new Auth0Middleware());
+        });
+
+        // User session routes (for favorites, history, preferences) - Legacy support
         $group->get('/session', [UserSessionController::class, 'getSession']);
         $group->post('/session/favorites/add', [UserSessionController::class, 'addToFavorites']);
         $group->post('/session/favorites/remove', [UserSessionController::class, 'removeFromFavorites']);
