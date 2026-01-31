@@ -13,8 +13,8 @@ class User extends Model
     protected $keyType = 'string';
     
     protected $fillable = [
-        'auth0_id',
         'email',
+        'password_hash',
         'username',
         'display_name',
         'preferences',
@@ -32,6 +32,10 @@ class User extends Model
         'is_active' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
+    ];
+
+    protected $hidden = [
+        'password_hash'
     ];
 
     protected static function boot()

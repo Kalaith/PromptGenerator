@@ -1,11 +1,28 @@
 <?php
 // Simplified index.php based on working dragons_den pattern
-require __DIR__ . '/../vendor/autoload.php';
+$localAutoload = __DIR__ . '/../vendor/autoload.php';
+$siblingAutoload = __DIR__ . '/../../backend/vendor/autoload.php';
+$centralAutoload = __DIR__ . '/../../../vendor/autoload.php';
 
-use Slim\Factory\AppFactory;
-use DI\Container;
+if (file_exists($localAutoload)) {
+    $loader = require $localAutoload;
+} elseif (file_exists($siblingAutoload)) {
+    $loader = require $siblingAutoload;
+} elseif (file_exists($centralAutoload)) {
+    $loader = require $centralAutoload;
+} else {
+    throw new RuntimeException('Composer autoload.php not found. Checked: ' . $localAutoload . ', ' . $siblingAutoload . ', and ' . $centralAutoload);
+}
+
+// Ensure autoloader points to the deployed API source directory
+if (isset($loader) && method_exists($loader, 'addPsr4')) {
+    $loader->addPsr4('AnimePromptGen\\', __DIR__ . '/../src/');
+}
+
+use DI\ContainerBuilder;
 use Dotenv\Dotenv;
 use Illuminate\Database\Capsule\Manager as Capsule;
+use AnimePromptGen\Core\Router;
 
 // Load environment variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
@@ -28,30 +45,26 @@ $capsule->setAsGlobal();
 $capsule->bootEloquent();
 
 // Simple container (like dragons_den)
-$container = new Container();
-AppFactory::setContainer($container);
-$app = AppFactory::create();
+$containerBuilder = new ContainerBuilder();
+$containerBuilder->addDefinitions(__DIR__ . '/../config/dependencies.php');
+$container = $containerBuilder->build();
 
-// CORS Middleware - Simple headers only for actual requests
-$app->add(function ($request, $handler) {
-    $response = $handler->handle($request);
-    return $response
-        ->withHeader('Access-Control-Allow-Origin', '*')
-        ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-});
+// Router (rambler-style)
+$router = new Router($container);
 
-// Set base path for rewrite rules (comment out for development)
-// $app->setBasePath('/anime_prompt_gen');
+// Set base path for rewrite rules (uncommented for production deployment)
+$router->setBasePath('/anime_prompt_gen');
 
-// Other Middleware
-$app->addBodyParsingMiddleware();
-$app->addRoutingMiddleware();
-
-// Error Middleware
-$errorMiddleware = $app->addErrorMiddleware(true, true, true);
+// Handle CORS preflight
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Content-Type, Accept, Origin, Authorization');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    http_response_code(200);
+    exit;
+}
 
 // Load the full routes file now that we have a working setup
-(require __DIR__ . '/../config/routes.php')($app);
+(require __DIR__ . '/../config/routes.php')($router);
 
-$app->run();
+$router->handle();

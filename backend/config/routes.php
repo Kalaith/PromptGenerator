@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Slim\App;
+use AnimePromptGen\Core\Router;
 use AnimePromptGen\Controllers\PromptController;
 use AnimePromptGen\Controllers\AdventurerController;
 use AnimePromptGen\Controllers\AlienController;
@@ -18,204 +18,199 @@ use AnimePromptGen\Controllers\AttributeCategoryController;
 use AnimePromptGen\Controllers\GeneratorTypesController;
 use AnimePromptGen\Controllers\ImageController;
 use AnimePromptGen\Controllers\ImageQueueController;
-use AnimePromptGen\Controllers\Auth0Controller;
-use AnimePromptGen\Middleware\Auth0Middleware;
+use AnimePromptGen\Controllers\AuthController;
 
-return function (App $app) {
-    // API base path
-    $app->group('/api/v1', function ($group) {
-        
-        // Prompt generation routes
-        $group->post('/prompts/generate', [PromptController::class, 'generate']);
-        
-        // Adventurer generation routes
-        $group->post('/adventurers/generate', [AdventurerController::class, 'generate']);
-        $group->post('/adventurers/generate-multiple', [AdventurerController::class, 'generateMultiple']);
-        $group->get('/adventurers/options', [AdventurerController::class, 'getAvailableOptions']);
-        
-        // Alien generation routes
-        $group->post('/aliens/generate', [AlienController::class, 'generate']);
-        $group->get('/aliens/species-classes', [AlienController::class, 'getSpeciesClasses']);
-        $group->get('/aliens/genders', [AlienController::class, 'getGenders']);
-        $group->get('/aliens/artistic-styles', [AlienController::class, 'getArtisticStyles']);
-        $group->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
-        $group->get('/aliens/climates', [AlienController::class, 'getClimates']);
-        
-        // Auth0 endpoints
-        $group->group('/auth0', function ($auth) {
-            $auth->post('/verify', [Auth0Controller::class, 'verifyUser'])->add(new Auth0Middleware());
-            $auth->get('/me', [Auth0Controller::class, 'getCurrentUser'])->add(new Auth0Middleware());
-            $auth->get('/validate', [Auth0Controller::class, 'validateSession'])->add(new Auth0Middleware());
-            $auth->put('/preferences', [Auth0Controller::class, 'updatePreferences'])->add(new Auth0Middleware());
-            $auth->get('/favorites', [Auth0Controller::class, 'getFavorites'])->add(new Auth0Middleware());
-            $auth->get('/history', [Auth0Controller::class, 'getHistory'])->add(new Auth0Middleware());
-        });
+return function (Router $router): void {
+    $api = '/api/v1';
 
-        // User session routes (for favorites, history, preferences) - Legacy support
-        $group->get('/session', [UserSessionController::class, 'getSession']);
-        $group->post('/session/favorites/add', [UserSessionController::class, 'addToFavorites']);
-        $group->post('/session/favorites/remove', [UserSessionController::class, 'removeFromFavorites']);
-        $group->post('/session/history/add', [UserSessionController::class, 'addToHistory']);
-        $group->post('/session/history/clear', [UserSessionController::class, 'clearHistory']);
-        $group->post('/session/preferences', [UserSessionController::class, 'updatePreferences']);
-        
-        // Species routes
-        $group->get('/species', [SpeciesController::class, 'getAll']);
-        $group->get('/species/types', [SpeciesController::class, 'getTypes']);
-        
-        // Generator types routes
-        $group->get('/generator-types', [GeneratorTypesController::class, 'getAll']);
-        $group->get('/generator-types/names', [GeneratorTypesController::class, 'getNames']);
-        $group->post('/generator-types', [GeneratorTypesController::class, 'create']);
-        $group->put('/generator-types/{id}', [GeneratorTypesController::class, 'update']);
-        $group->delete('/generator-types/{id}', [GeneratorTypesController::class, 'delete']);
-        
-        // Generic attributes route (replaces specific routes)
-        $group->get('/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
-        $group->get('/generator-attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
-        
-        // Legacy anime attributes route (for backward compatibility)
-        $group->get('/anime/attributes', [AnimeAttributesController::class, 'getAttributes']);
-        
-        // Attribute configuration management
-        $group->get('/attribute-config', [AttributeConfigController::class, 'getConfigs']);
-        $group->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
-        $group->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
-        $group->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
-        
-        // Attribute category management (generator-agnostic)
-        $group->get('/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
-        $group->get('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
-        $group->post('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
-        $group->put('/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
-        $group->delete('/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
-        
-        // Template routes (specific routes must come before parameterized routes)
-        $group->get('/templates', [TemplateController::class, 'getAll']);
-        $group->get('/templates/popular', [TemplateController::class, 'getPopular']);
-        $group->get('/templates/recent', [TemplateController::class, 'getRecent']);
-        $group->get('/templates/search', [TemplateController::class, 'search']);
-        $group->post('/templates', [TemplateController::class, 'create']);
-        $group->get('/templates/{id}', [TemplateController::class, 'getById']);
-        $group->put('/templates/{id}', [TemplateController::class, 'update']);
-        $group->delete('/templates/{id}', [TemplateController::class, 'delete']);
-        $group->post('/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
-        $group->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
-        
-        // Description template routes (specific routes must come before parameterized routes)
-        $group->get('/description-templates', [DescriptionTemplateController::class, 'getTemplates']);
-        $group->get('/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
-        $group->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates']);
-        $group->post('/description-templates', [DescriptionTemplateController::class, 'createTemplate']);
-        $group->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getTemplate']);
-        $group->put('/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
-        $group->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
-        
-        // Game assets routes (specific routes must come before parameterized routes)
-        $group->get('/game-assets/types', [GameAssetsController::class, 'getAssetTypes']);
-        $group->post('/game-assets/initialize', [GameAssetsController::class, 'initializeAssets']);
-        $group->get('/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
-        $group->get('/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
-        
-        // Image generation and management routes (specific routes MUST come before variable routes)
-        $group->post('/images/generate', [ImageQueueController::class, 'queueGeneration']);
-        $group->get('/images/queue', [ImageQueueController::class, 'getQueue']);
-        $group->get('/images/queue/status', [ImageQueueController::class, 'getQueueStatus']);
-        $group->put('/images/queue/{id}/status', [ImageQueueController::class, 'updateStatus']);
-        $group->delete('/images/queue/{id}', [ImageQueueController::class, 'cancelGeneration']);
-        
-        $group->get('/images/stats', [ImageController::class, 'getGalleryStats']);
-        $group->get('/images', [ImageController::class, 'getImages']);
-        $group->get('/images/{id}', [ImageController::class, 'getImage']);
-        $group->get('/images/{id}/download', [ImageController::class, 'downloadImage']);
-        $group->post('/images/{queue_id}/complete', [ImageController::class, 'completeGeneration']);
-        
-        $group->get('/collections', [ImageController::class, 'getCollections']);
+    // Prompt generation routes
+    $router->post($api . '/prompts/generate', [PromptController::class, 'generate']);
 
-        // Health check
-        $group->get('/health', function ($request, $response) {
-            $response->getBody()->write(json_encode([
-                'status' => 'healthy',
-                'version' => $_ENV['API_VERSION'] ?? 'v1',
-                'timestamp' => date('c')
-            ]));
-            return $response->withHeader('Content-Type', 'application/json');
-        });
+    // Adventurer generation routes
+    $router->post($api . '/adventurers/generate', [AdventurerController::class, 'generate']);
+    $router->post($api . '/adventurers/generate-multiple', [AdventurerController::class, 'generateMultiple']);
+    $router->get($api . '/adventurers/options', [AdventurerController::class, 'getAvailableOptions']);
+
+    // Alien generation routes
+    $router->post($api . '/aliens/generate', [AlienController::class, 'generate']);
+    $router->get($api . '/aliens/species-classes', [AlienController::class, 'getSpeciesClasses']);
+    $router->get($api . '/aliens/genders', [AlienController::class, 'getGenders']);
+    $router->get($api . '/aliens/artistic-styles', [AlienController::class, 'getArtisticStyles']);
+    $router->get($api . '/aliens/environments', [AlienController::class, 'getEnvironments']);
+    $router->get($api . '/aliens/climates', [AlienController::class, 'getClimates']);
+
+    // User session routes (for favorites, history, preferences) - Legacy support
+    $router->get($api . '/session', [UserSessionController::class, 'getSession']);
+    $router->post($api . '/session/favorites/add', [UserSessionController::class, 'addToFavorites']);
+    $router->post($api . '/session/favorites/remove', [UserSessionController::class, 'removeFromFavorites']);
+    $router->post($api . '/session/history/add', [UserSessionController::class, 'addToHistory']);
+    $router->post($api . '/session/history/clear', [UserSessionController::class, 'clearHistory']);
+    $router->post($api . '/session/preferences', [UserSessionController::class, 'updatePreferences']);
+
+    // Auth routes (central login system)
+    $router->post($api . '/auth/register', [AuthController::class, 'register']);
+    $router->post($api . '/auth/login', [AuthController::class, 'login']);
+
+    // Species routes
+    $router->get($api . '/species', [SpeciesController::class, 'getAll']);
+    $router->get($api . '/species/types', [SpeciesController::class, 'getTypes']);
+
+    // Generator types routes
+    $router->get($api . '/generator-types', [GeneratorTypesController::class, 'getAll']);
+    $router->get($api . '/generator-types/names', [GeneratorTypesController::class, 'getNames']);
+    $router->post($api . '/generator-types', [GeneratorTypesController::class, 'create']);
+    $router->put($api . '/generator-types/{id}', [GeneratorTypesController::class, 'update']);
+    $router->delete($api . '/generator-types/{id}', [GeneratorTypesController::class, 'delete']);
+
+    // Generic attributes route (replaces specific routes)
+    $router->get($api . '/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
+    $router->get($api . '/generator-attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
+
+    // Legacy anime attributes route (for backward compatibility)
+    $router->get($api . '/anime/attributes', [AnimeAttributesController::class, 'getAttributes']);
+
+    // Attribute configuration management
+    $router->get($api . '/attribute-config', [AttributeConfigController::class, 'getConfigs']);
+    $router->post($api . '/attribute-config', [AttributeConfigController::class, 'createConfig']);
+    $router->put($api . '/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
+    $router->delete($api . '/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
+
+    // Attribute category management (generator-agnostic)
+    $router->get($api . '/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
+    $router->get($api . '/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
+    $router->post($api . '/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
+    $router->put($api . '/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
+    $router->delete($api . '/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
+
+    // Template routes (specific routes must come before parameterized routes)
+    $router->get($api . '/templates', [TemplateController::class, 'getAll']);
+    $router->get($api . '/templates/popular', [TemplateController::class, 'getPopular']);
+    $router->get($api . '/templates/recent', [TemplateController::class, 'getRecent']);
+    $router->get($api . '/templates/search', [TemplateController::class, 'search']);
+    $router->post($api . '/templates', [TemplateController::class, 'create']);
+    $router->get($api . '/templates/{id}', [TemplateController::class, 'getById']);
+    $router->put($api . '/templates/{id}', [TemplateController::class, 'update']);
+    $router->delete($api . '/templates/{id}', [TemplateController::class, 'delete']);
+    $router->post($api . '/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
+    $router->post($api . '/templates/{id}/clone', [TemplateController::class, 'clone']);
+
+    // Description template routes (specific routes must come before parameterized routes)
+    $router->get($api . '/description-templates', [DescriptionTemplateController::class, 'getTemplates']);
+    $router->get($api . '/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
+    $router->post($api . '/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates']);
+    $router->post($api . '/description-templates', [DescriptionTemplateController::class, 'createTemplate']);
+    $router->get($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'getTemplate']);
+    $router->put($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
+    $router->delete($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
+
+    // Game assets routes (specific routes must come before parameterized routes)
+    $router->get($api . '/game-assets/types', [GameAssetsController::class, 'getAssetTypes']);
+    $router->post($api . '/game-assets/initialize', [GameAssetsController::class, 'initializeAssets']);
+    $router->get($api . '/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
+    $router->get($api . '/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
+
+    // Image generation and management routes (specific routes MUST come before variable routes)
+    $router->post($api . '/images/generate', [ImageQueueController::class, 'queueGeneration']);
+    $router->get($api . '/images/queue', [ImageQueueController::class, 'getQueue']);
+    $router->get($api . '/images/queue/status', [ImageQueueController::class, 'getQueueStatus']);
+    $router->put($api . '/images/queue/{id}/status', [ImageQueueController::class, 'updateStatus']);
+    $router->delete($api . '/images/queue/{id}', [ImageQueueController::class, 'cancelGeneration']);
+
+    $router->get($api . '/images/stats', [ImageController::class, 'getGalleryStats']);
+    $router->get($api . '/images', [ImageController::class, 'getImages']);
+    $router->get($api . '/images/{id}', [ImageController::class, 'getImage']);
+    $router->get($api . '/images/{id}/download', [ImageController::class, 'downloadImage']);
+    $router->post($api . '/images/{queue_id}/complete', [ImageController::class, 'completeGeneration']);
+
+    $router->get($api . '/collections', [ImageController::class, 'getCollections']);
+
+    // Health check
+    $router->get($api . '/health', function ($request, $response) {
+        $response->getBody()->write(json_encode([
+            'status' => 'healthy',
+            'version' => $_ENV['API_VERSION'] ?? 'v1',
+            'timestamp' => date('c')
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
     });
-    
+
     // Direct routes (without API prefix) for backward compatibility and direct browser access
-    $app->get('/generator-types', [GeneratorTypesController::class, 'getAll']);
-    $app->get('/generator-types/names', [GeneratorTypesController::class, 'getNames']);
-    $app->post('/generator-types', [GeneratorTypesController::class, 'create']);
-    $app->put('/generator-types/{id}', [GeneratorTypesController::class, 'update']);
-    $app->delete('/generator-types/{id}', [GeneratorTypesController::class, 'delete']);
-    
-    $app->get('/templates', [TemplateController::class, 'getAll']);
-    $app->get('/templates/popular', [TemplateController::class, 'getPopular']);
-    $app->get('/templates/recent', [TemplateController::class, 'getRecent']);
-    $app->get('/templates/search', [TemplateController::class, 'search']);
-    $app->post('/templates', [TemplateController::class, 'create']);
-    $app->get('/templates/{id}', [TemplateController::class, 'getById']);
-    $app->put('/templates/{id}', [TemplateController::class, 'update']);
-    $app->delete('/templates/{id}', [TemplateController::class, 'delete']);
-    $app->post('/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
-    $app->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
-    
+    $router->get('/generator-types', [GeneratorTypesController::class, 'getAll']);
+    $router->get('/generator-types/names', [GeneratorTypesController::class, 'getNames']);
+    $router->post('/generator-types', [GeneratorTypesController::class, 'create']);
+    $router->put('/generator-types/{id}', [GeneratorTypesController::class, 'update']);
+    $router->delete('/generator-types/{id}', [GeneratorTypesController::class, 'delete']);
+
+    $router->get('/templates', [TemplateController::class, 'getAll']);
+    $router->get('/templates/popular', [TemplateController::class, 'getPopular']);
+    $router->get('/templates/recent', [TemplateController::class, 'getRecent']);
+    $router->get('/templates/search', [TemplateController::class, 'search']);
+    $router->post('/templates', [TemplateController::class, 'create']);
+    $router->get('/templates/{id}', [TemplateController::class, 'getById']);
+    $router->put('/templates/{id}', [TemplateController::class, 'update']);
+    $router->delete('/templates/{id}', [TemplateController::class, 'delete']);
+    $router->post('/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
+    $router->post('/templates/{id}/clone', [TemplateController::class, 'clone']);
+
     // Description template routes (direct access - specific routes must come before parameterized routes)
-    $app->get('/description-templates', [DescriptionTemplateController::class, 'getTemplates']);
-    $app->get('/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
-    $app->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates']);
-    $app->post('/description-templates', [DescriptionTemplateController::class, 'createTemplate']);
-    $app->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getTemplate']);
-    $app->put('/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
-    $app->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
-    
+    $router->get('/description-templates', [DescriptionTemplateController::class, 'getTemplates']);
+    $router->get('/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
+    $router->post('/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates']);
+    $router->post('/description-templates', [DescriptionTemplateController::class, 'createTemplate']);
+    $router->get('/description-templates/{id}', [DescriptionTemplateController::class, 'getTemplate']);
+    $router->put('/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
+    $router->delete('/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
+
     // Game assets routes (direct access - specific routes must come before parameterized routes)
-    $app->get('/game-assets/types', [GameAssetsController::class, 'getAssetTypes']);
-    $app->post('/game-assets/initialize', [GameAssetsController::class, 'initializeAssets']);
-    $app->get('/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
-    $app->get('/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
-    
-    $app->get('/species', [SpeciesController::class, 'getAll']);
-    $app->get('/species/types', [SpeciesController::class, 'getTypes']);
-    
-    $app->get('/generator-attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
-    $app->get('/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
-    
-    $app->post('/prompts/generate', [PromptController::class, 'generate']);
-    $app->post('/adventurers/generate', [AdventurerController::class, 'generate']);
-    $app->post('/adventurers/generate-multiple', [AdventurerController::class, 'generateMultiple']);
-    $app->get('/adventurers/options', [AdventurerController::class, 'getAvailableOptions']);
-    $app->post('/aliens/generate', [AlienController::class, 'generate']);
-    $app->get('/aliens/species-classes', [AlienController::class, 'getSpeciesClasses']);
-    $app->get('/aliens/genders', [AlienController::class, 'getGenders']);
-    $app->get('/aliens/artistic-styles', [AlienController::class, 'getArtisticStyles']);
-    $app->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
-    $app->get('/aliens/climates', [AlienController::class, 'getClimates']);
-    
+    $router->get('/game-assets/types', [GameAssetsController::class, 'getAssetTypes']);
+    $router->post('/game-assets/initialize', [GameAssetsController::class, 'initializeAssets']);
+    $router->get('/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
+    $router->get('/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
+
+    $router->get('/species', [SpeciesController::class, 'getAll']);
+    $router->get('/species/types', [SpeciesController::class, 'getTypes']);
+
+    $router->get('/generator-attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
+    $router->get('/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
+
+    $router->post('/prompts/generate', [PromptController::class, 'generate']);
+    $router->post('/adventurers/generate', [AdventurerController::class, 'generate']);
+    $router->post('/adventurers/generate-multiple', [AdventurerController::class, 'generateMultiple']);
+    $router->get('/adventurers/options', [AdventurerController::class, 'getAvailableOptions']);
+    $router->post('/aliens/generate', [AlienController::class, 'generate']);
+    $router->get('/aliens/species-classes', [AlienController::class, 'getSpeciesClasses']);
+    $router->get('/aliens/genders', [AlienController::class, 'getGenders']);
+    $router->get('/aliens/artistic-styles', [AlienController::class, 'getArtisticStyles']);
+    $router->get('/aliens/environments', [AlienController::class, 'getEnvironments']);
+    $router->get('/aliens/climates', [AlienController::class, 'getClimates']);
+
     // User session routes (direct access)
-    $app->get('/session', [UserSessionController::class, 'getSession']);
-    $app->post('/session/favorites/add', [UserSessionController::class, 'addToFavorites']);
-    $app->post('/session/favorites/remove', [UserSessionController::class, 'removeFromFavorites']);
-    $app->post('/session/history/add', [UserSessionController::class, 'addToHistory']);
-    $app->post('/session/history/clear', [UserSessionController::class, 'clearHistory']);
-    $app->post('/session/preferences', [UserSessionController::class, 'updatePreferences']);
-    
+    $router->get('/session', [UserSessionController::class, 'getSession']);
+    $router->post('/session/favorites/add', [UserSessionController::class, 'addToFavorites']);
+    $router->post('/session/favorites/remove', [UserSessionController::class, 'removeFromFavorites']);
+    $router->post('/session/history/add', [UserSessionController::class, 'addToHistory']);
+    $router->post('/session/history/clear', [UserSessionController::class, 'clearHistory']);
+    $router->post('/session/preferences', [UserSessionController::class, 'updatePreferences']);
+
+    // Auth routes (central login system)
+    $router->post('/auth/register', [AuthController::class, 'register']);
+    $router->post('/auth/login', [AuthController::class, 'login']);
+
     // Attribute configuration management (direct access)
-    $app->get('/attribute-config', [AttributeConfigController::class, 'getConfigs']);
-    $app->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
-    $app->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
-    $app->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
-    
+    $router->get('/attribute-config', [AttributeConfigController::class, 'getConfigs']);
+    $router->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
+    $router->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
+    $router->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
+
     // Attribute category management (direct access)
-    $app->get('/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
-    $app->get('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
-    $app->post('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
-    $app->put('/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
-    $app->delete('/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
-    
+    $router->get('/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
+    $router->get('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
+    $router->post('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
+    $router->put('/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
+    $router->delete('/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
+
     // Health check (direct access)
-    $app->get('/health', function ($request, $response) {
+    $router->get('/health', function ($request, $response) {
         $response->getBody()->write(json_encode([
             'status' => 'healthy',
             'version' => $_ENV['API_VERSION'] ?? 'v1',

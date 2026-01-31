@@ -15,13 +15,17 @@ use AnimePromptGen\Controllers\GeneratorAttributesController;
 use AnimePromptGen\Controllers\AttributeConfigController;
 use AnimePromptGen\Controllers\AttributeCategoryController;
 use AnimePromptGen\Controllers\GeneratorTypesController;
+use AnimePromptGen\Controllers\AuthController;
 use AnimePromptGen\External\GeneratorTypeRepository;
+use AnimePromptGen\External\UserRepository;
 use AnimePromptGen\Actions\GetAnimeAttributesAction;
 use AnimePromptGen\Actions\GetAttributeCategoriesAction;
 use AnimePromptGen\Actions\GetAttributeOptionsByCategoryAction;
 use AnimePromptGen\Actions\CreateAttributeOptionAction;
 use AnimePromptGen\Actions\UpdateAttributeOptionAction;
 use AnimePromptGen\Actions\DeleteAttributeOptionAction;
+use AnimePromptGen\Actions\LoginAction;
+use AnimePromptGen\Actions\RegisterAction;
 use AnimePromptGen\Actions\GetGeneratorAttributesAction;
 use AnimePromptGen\Actions\GeneratePromptsAction;
 use AnimePromptGen\Actions\GenerateAdventurerAction;
@@ -55,6 +59,7 @@ return [
     AlienSpeciesRepository::class => \DI\autowire(),
     AlienTraitRepository::class => \DI\autowire(),
     UserSessionRepository::class => \DI\autowire(),
+    UserRepository::class => \DI\autowire(),
     TemplateRepository::class => \DI\autowire(),
     DescriptionTemplateRepository::class => \DI\autowire(),
     GameAttributeRepository::class => \DI\autowire(),
@@ -82,6 +87,8 @@ return [
     CreateAttributeOptionAction::class => \DI\autowire(),
     UpdateAttributeOptionAction::class => \DI\autowire(),
     DeleteAttributeOptionAction::class => \DI\autowire(),
+    LoginAction::class => \DI\autowire(),
+    RegisterAction::class => \DI\autowire(),
 
     // Controllers
     PromptController::class => \DI\autowire(),
@@ -97,4 +104,5 @@ return [
     AttributeConfigController::class => \DI\autowire(),
     AttributeCategoryController::class => \DI\autowire(),
     GeneratorTypesController::class => \DI\autowire(),
+    AuthController::class => \DI\autowire(),
 ];
