@@ -54,6 +54,15 @@ class ApiClient {
       headers['Content-Type'] = 'application/json';
     }
     
+    // Add Authorization header if token exists
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('API Client: Adding Authorization header with token:', token.substring(0, 20) + '...');
+    } else {
+      console.log('API Client: No auth token found');
+    }
+    
     // Add other headers if specified
     if (options.headers) {
       Object.assign(headers, options.headers);

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Debug - Anime Prompt Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Authentication Debug Page</h1>
+    <p>This page helps debug authentication issues with the Anime Prompt Generator API.</p>
+
+    <div class="debug-section info">
+        <h3>📊 Health Check</h3>
+        <button onclick="checkHealth()">Check API Health</button>
+        <pre id="health-result">Click to check...</pre>
+    </div>
+
+    <div class="debug-section info">
+        <h3>🔐 Authentication Status</h3>
+        <button onclick="checkAuth()">Check Auth Status</button>
+        <pre id="auth-result">Click to check...</pre>
+    </div>
+
+    <div class="debug-section info">
+        <h3>🎫 Stored Token</h3>
+        <button onclick="checkStoredToken()">Check Stored Token</button>
+        <pre id="token-result">Click to check...</pre>
+    </div>
+
+    <div class="debug-section info">
+        <h3>📤 Test Protected API Call</h3>
+        <button onclick="testProtectedCall()">Test Protected Endpoint</button>
+        <pre id="protected-result">Click to test...</pre>
+    </div>
+
+    <div class="debug-section info">
+        <h3>🧹 Clear Stored Data</h3>
+        <button onclick="clearStorage()">Clear All Stored Data</button>
+        <pre id="clear-result">Ready to clear...</pre>
+    </div>
+
+    <script>
+        const API_BASE = '/anime_prompt_gen/api/v1';
+
+        async function makeRequest(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            // Add Authorization header if token exists
+            const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+            console.log('Debug page: Checking for auth token:', token ? 'found' : 'not found');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+                console.log('Debug page: Added Authorization header');
+            } else {
+                console.log('Debug page: No auth token found');
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers,
+                    ...options
+                });
+                const data = await response.json();
+                return { status: response.status, data };
+            } catch (error) {
+                return { error: error.message };
+            }
+        }
+
+        async function checkHealth() {
+            const result = await makeRequest('/health');
+            document.getElementById('health-result').textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function checkAuth() {
+            const result = await makeRequest('/debug/auth');
+            document.getElementById('auth-result').textContent = JSON.stringify(result, null, 2);
+        }
+
+        function checkStoredToken() {
+            const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+            console.log('Debug page: Stored token check:', token ? 'token exists' : 'no token');
+            const result = {
+                token_exists: !!token,
+                token_length: token ? token.length : 0,
+                token_preview: token ? token.substring(0, 50) + '...' : null,
+                storage_key: localStorage.getItem('token') ? 'token' : localStorage.getItem('auth_token') ? 'auth_token' : 'none'
+            };
+            document.getElementById('token-result').textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function testProtectedCall() {
+            const result = await makeRequest('/generator-types');
+            document.getElementById('protected-result').textContent = JSON.stringify(result, null, 2);
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('auth_token');
+            document.getElementById('clear-result').textContent = '✅ Cleared all stored authentication data';
+            // Refresh other displays
+            checkStoredToken();
+            checkAuth();
+        }
+
+        // Auto-check on page load
+        window.onload = function() {
+            checkStoredToken();
+        };
+    </script>
+</body>
+</html></content>
+<parameter name="filePath">H:\WebHatchery\apps\anime_prompt_gen\backend\public\debug.html

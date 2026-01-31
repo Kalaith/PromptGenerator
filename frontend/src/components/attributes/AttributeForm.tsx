@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NewAttributeData, AttributeConfig } from './types';
-import { config } from '../../config/app';
+import { apiClient } from '../../api/client';
 
 interface GeneratorType {
   name: string;
@@ -29,11 +29,9 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   useEffect(() => {
     const fetchGeneratorTypes = async () => {
       try {
-        const apiBaseUrl = config.getApi().baseUrl;
-        const response = await fetch(`${apiBaseUrl}/generator-types`);
-        const data = await response.json();
+        const response = await apiClient.get('/generator-types');
         
-        if (data.success) {
+        if (response.success) {
           setGeneratorTypes(data.data.generator_types || []);
         } else {
           setError('Failed to load generator types');

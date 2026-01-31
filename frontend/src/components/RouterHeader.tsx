@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { config } from '../config/app';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { apiClient } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
+import LoginModal from './LoginModal';
 
 interface GeneratorType {
   name: string;
@@ -13,20 +15,31 @@ interface GeneratorType {
 
 const RouterHeader: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, logout } = useAuth();
   const [generatorTypes, setGeneratorTypes] = useState<GeneratorType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Protected routes that require authentication
+  const protectedRoutes = ['/templates', '/description-templates', '/attribute-manager', '/attribute-options', '/generator-types'];
+
+  const handleNavClick = (path: string, e: React.MouseEvent) => {
+    if (protectedRoutes.includes(path) && !isAuthenticated) {
+      e.preventDefault();
+      setShowLoginModal(true);
+    }
+  };
 
   useEffect(() => {
     const fetchGeneratorTypes = async () => {
       try {
-        const apiBaseUrl = config.getApi().baseUrl;
-        const response = await fetch(`${apiBaseUrl}/generator-types`);
-        const data = await response.json();
+        const response = await apiClient.get('/generator-types');
         
-        if (data.success) {
-          setGeneratorTypes(data.data.generator_types || []);
+        if (response.success) {
+          setGeneratorTypes(response.data.generator_types || []);
         }
       } catch (err) {
         console.error('Error fetching generator types:', err);
@@ -40,15 +53,25 @@ const RouterHeader: React.FC = () => {
     fetchGeneratorTypes();
   }, []);
 
-  // Static admin pages
-  const staticNavItems = [
+  // Static pages - always visible
+  const publicNavItems = [
     { path: '/gallery', label: 'Gallery', icon: '🖼️' },
+  ];
+
+  // Management pages - only visible when authenticated
+  const managementNavItems = [
     { path: '/templates', label: 'Templates', icon: '📝' },
     { path: '/description-templates', label: 'Description Templates', icon: '📖' },
     { path: '/attribute-manager', label: 'Attributes', icon: '⚙️' },
     { path: '/attribute-options', label: 'Attribute Options', icon: '🎯' },
     { path: '/generator-types', label: 'Generator Types', icon: '🔧' },
   ];
+
+  // Filter management items based on authentication
+  const visibleManagementItems = isAuthenticated ? managementNavItems : [];
+
+  // Combine all static items
+  const allStaticItems = [...publicNavItems, ...visibleManagementItems];
 
   // Get dynamic generator types plus static admin pages
   const navItems = [
@@ -59,7 +82,7 @@ const RouterHeader: React.FC = () => {
       icon: getGeneratorTypeIcon(type.name) // We'll need to create this helper
     })) : []),
     // Static admin pages
-    ...staticNavItems,
+    ...allStaticItems,
   ];
 
   // Helper function to get icon for generator type
@@ -96,6 +119,7 @@ const RouterHeader: React.FC = () => {
               <Link
                 key={path}
                 to={path}
+                onClick={(e) => handleNavClick(path, e)}
                 className={`
                   group relative px-4 py-2 rounded-xl font-medium text-sm md:text-base
                   transition-all duration-300 transform hover:scale-105
@@ -120,11 +144,38 @@ const RouterHeader: React.FC = () => {
               </Link>
             ))}
           </nav>
+
+          {/* Auth buttons */}
+          <div className="flex justify-center mt-4">
+            {isAuthenticated ? (
+              <button
+                onClick={logout}
+                className="px-4 py-2 rounded-xl font-medium text-sm md:text-base
+                  transition-all duration-300 transform hover:scale-105
+                  backdrop-blur-sm border border-white/30
+                  bg-white/10 text-white/90 hover:bg-white/20 hover:text-white hover:border-white/40
+                  flex items-center gap-2"
+              >
+                <span>🚪</span>
+                <span>Logout</span>
+              </button>
+            ) : (
+              <div className="text-white/80 text-sm">
+                Login required for management features
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Decorative bottom border */}
       <div className="h-1 bg-gradient-to-r from-sakura-400 via-violet-400 to-ocean-400"></div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </header>
   );
 };

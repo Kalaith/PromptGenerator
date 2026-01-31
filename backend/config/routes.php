@@ -19,6 +19,7 @@ use AnimePromptGen\Controllers\GeneratorTypesController;
 use AnimePromptGen\Controllers\ImageController;
 use AnimePromptGen\Controllers\ImageQueueController;
 use AnimePromptGen\Controllers\AuthController;
+use AnimePromptGen\Middleware\JwtMiddleware;
 
 return function (Router $router): void {
     $api = '/api/v1';
@@ -58,9 +59,9 @@ return function (Router $router): void {
     // Generator types routes
     $router->get($api . '/generator-types', [GeneratorTypesController::class, 'getAll']);
     $router->get($api . '/generator-types/names', [GeneratorTypesController::class, 'getNames']);
-    $router->post($api . '/generator-types', [GeneratorTypesController::class, 'create']);
-    $router->put($api . '/generator-types/{id}', [GeneratorTypesController::class, 'update']);
-    $router->delete($api . '/generator-types/{id}', [GeneratorTypesController::class, 'delete']);
+    $router->post($api . '/generator-types', [GeneratorTypesController::class, 'create'], [JwtMiddleware::class]);
+    $router->put($api . '/generator-types/{id}', [GeneratorTypesController::class, 'update'], [JwtMiddleware::class]);
+    $router->delete($api . '/generator-types/{id}', [GeneratorTypesController::class, 'delete'], [JwtMiddleware::class]);
 
     // Generic attributes route (replaces specific routes)
     $router->get($api . '/attributes/{type}', [GeneratorAttributesController::class, 'getAttributes']);
@@ -70,42 +71,42 @@ return function (Router $router): void {
     $router->get($api . '/anime/attributes', [AnimeAttributesController::class, 'getAttributes']);
 
     // Attribute configuration management
-    $router->get($api . '/attribute-config', [AttributeConfigController::class, 'getConfigs']);
-    $router->post($api . '/attribute-config', [AttributeConfigController::class, 'createConfig']);
-    $router->put($api . '/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
-    $router->delete($api . '/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
+    $router->get($api . '/attribute-config', [AttributeConfigController::class, 'getConfigs'], [JwtMiddleware::class]);
+    $router->post($api . '/attribute-config', [AttributeConfigController::class, 'createConfig'], [JwtMiddleware::class]);
+    $router->put($api . '/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig'], [JwtMiddleware::class]);
+    $router->delete($api . '/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig'], [JwtMiddleware::class]);
 
     // Attribute category management (generator-agnostic)
-    $router->get($api . '/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
-    $router->get($api . '/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
-    $router->post($api . '/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
-    $router->put($api . '/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
-    $router->delete($api . '/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
+    $router->get($api . '/attribute-categories', [AttributeCategoryController::class, 'getCategories'], [JwtMiddleware::class]);
+    $router->get($api . '/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions'], [JwtMiddleware::class]);
+    $router->post($api . '/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption'], [JwtMiddleware::class]);
+    $router->put($api . '/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption'], [JwtMiddleware::class]);
+    $router->delete($api . '/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption'], [JwtMiddleware::class]);
 
     // Template routes (specific routes must come before parameterized routes)
     $router->get($api . '/templates', [TemplateController::class, 'getAll']);
     $router->get($api . '/templates/popular', [TemplateController::class, 'getPopular']);
     $router->get($api . '/templates/recent', [TemplateController::class, 'getRecent']);
     $router->get($api . '/templates/search', [TemplateController::class, 'search']);
-    $router->post($api . '/templates', [TemplateController::class, 'create']);
+    $router->post($api . '/templates', [TemplateController::class, 'create'], [JwtMiddleware::class]);
     $router->get($api . '/templates/{id}', [TemplateController::class, 'getById']);
-    $router->put($api . '/templates/{id}', [TemplateController::class, 'update']);
-    $router->delete($api . '/templates/{id}', [TemplateController::class, 'delete']);
+    $router->put($api . '/templates/{id}', [TemplateController::class, 'update'], [JwtMiddleware::class]);
+    $router->delete($api . '/templates/{id}', [TemplateController::class, 'delete'], [JwtMiddleware::class]);
     $router->post($api . '/templates/{id}/use', [TemplateController::class, 'incrementUsage']);
-    $router->post($api . '/templates/{id}/clone', [TemplateController::class, 'clone']);
+    $router->post($api . '/templates/{id}/clone', [TemplateController::class, 'clone'], [JwtMiddleware::class]);
 
     // Description template routes (specific routes must come before parameterized routes)
     $router->get($api . '/description-templates', [DescriptionTemplateController::class, 'getTemplates']);
     $router->get($api . '/description-templates/generator-types', [DescriptionTemplateController::class, 'getGeneratorTypes']);
-    $router->post($api . '/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates']);
-    $router->post($api . '/description-templates', [DescriptionTemplateController::class, 'createTemplate']);
+    $router->post($api . '/description-templates/bulk/{generator_type}', [DescriptionTemplateController::class, 'bulkUpdateTemplates'], [JwtMiddleware::class]);
+    $router->post($api . '/description-templates', [DescriptionTemplateController::class, 'createTemplate'], [JwtMiddleware::class]);
     $router->get($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'getTemplate']);
-    $router->put($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate']);
-    $router->delete($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate']);
+    $router->put($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'updateTemplate'], [JwtMiddleware::class]);
+    $router->delete($api . '/description-templates/{id}', [DescriptionTemplateController::class, 'deleteTemplate'], [JwtMiddleware::class]);
 
     // Game assets routes (specific routes must come before parameterized routes)
     $router->get($api . '/game-assets/types', [GameAssetsController::class, 'getAssetTypes']);
-    $router->post($api . '/game-assets/initialize', [GameAssetsController::class, 'initializeAssets']);
+    $router->post($api . '/game-assets/initialize', [GameAssetsController::class, 'initializeAssets'], [JwtMiddleware::class]);
     $router->get($api . '/game-assets/{type}', [GameAssetsController::class, 'getAssetsByType']);
     $router->get($api . '/game-assets/{type}/categories', [GameAssetsController::class, 'getCategoriesByType']);
 
@@ -113,8 +114,8 @@ return function (Router $router): void {
     $router->post($api . '/images/generate', [ImageQueueController::class, 'queueGeneration']);
     $router->get($api . '/images/queue', [ImageQueueController::class, 'getQueue']);
     $router->get($api . '/images/queue/status', [ImageQueueController::class, 'getQueueStatus']);
-    $router->put($api . '/images/queue/{id}/status', [ImageQueueController::class, 'updateStatus']);
-    $router->delete($api . '/images/queue/{id}', [ImageQueueController::class, 'cancelGeneration']);
+    $router->put($api . '/images/queue/{id}/status', [ImageQueueController::class, 'updateStatus'], [JwtMiddleware::class]);
+    $router->delete($api . '/images/queue/{id}', [ImageQueueController::class, 'cancelGeneration'], [JwtMiddleware::class]);
 
     $router->get($api . '/images/stats', [ImageController::class, 'getGalleryStats']);
     $router->get($api . '/images', [ImageController::class, 'getImages']);
@@ -197,17 +198,17 @@ return function (Router $router): void {
     $router->post('/auth/login', [AuthController::class, 'login']);
 
     // Attribute configuration management (direct access)
-    $router->get('/attribute-config', [AttributeConfigController::class, 'getConfigs']);
-    $router->post('/attribute-config', [AttributeConfigController::class, 'createConfig']);
-    $router->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig']);
-    $router->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig']);
+    $router->get('/attribute-config', [AttributeConfigController::class, 'getConfigs'], [JwtMiddleware::class]);
+    $router->post('/attribute-config', [AttributeConfigController::class, 'createConfig'], [JwtMiddleware::class]);
+    $router->put('/attribute-config/{id}', [AttributeConfigController::class, 'updateConfig'], [JwtMiddleware::class]);
+    $router->delete('/attribute-config/{id}', [AttributeConfigController::class, 'deleteConfig'], [JwtMiddleware::class]);
 
     // Attribute category management (direct access)
-    $router->get('/attribute-categories', [AttributeCategoryController::class, 'getCategories']);
-    $router->get('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions']);
-    $router->post('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption']);
-    $router->put('/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption']);
-    $router->delete('/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption']);
+    $router->get('/attribute-categories', [AttributeCategoryController::class, 'getCategories'], [JwtMiddleware::class]);
+    $router->get('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'getCategoryOptions'], [JwtMiddleware::class]);
+    $router->post('/attribute-categories/{category}/options', [AttributeCategoryController::class, 'createCategoryOption'], [JwtMiddleware::class]);
+    $router->put('/attribute-options/{id}', [AttributeCategoryController::class, 'updateOption'], [JwtMiddleware::class]);
+    $router->delete('/attribute-options/{id}', [AttributeCategoryController::class, 'deleteOption'], [JwtMiddleware::class]);
 
     // Health check (direct access)
     $router->get('/health', function ($request, $response) {
@@ -217,5 +218,42 @@ return function (Router $router): void {
             'timestamp' => date('c')
         ]));
         return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    // Debug endpoint for authentication
+    $router->get($api . '/debug/auth', function ($request, $response) {
+        $authHeader = $request->getHeaderLine('Authorization');
+        $hasToken = !empty($authHeader);
+        $tokenParts = [];
+
+        if ($hasToken && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+            $token = $matches[1];
+            try {
+                $decoded = \Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($_ENV['JWT_SECRET'] ?? '', 'HS256'));
+                $tokenParts = [
+                    'header' => json_decode(base64_decode(explode('.', $token)[0]), true),
+                    'payload' => json_decode(base64_decode(explode('.', $token)[1]), true),
+                    'valid' => true
+                ];
+            } catch (\Exception $e) {
+                $tokenParts = ['error' => $e->getMessage(), 'valid' => false];
+            }
+        }
+
+        $response->getBody()->write(json_encode([
+            'auth_header_present' => $hasToken,
+            'auth_header_value' => $hasToken ? substr($authHeader, 0, 50) . '...' : null,
+            'token_info' => $tokenParts,
+            'server_time' => date('c'),
+            'jwt_secret_configured' => !empty($_ENV['JWT_SECRET'])
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    // Debug page route
+    $router->get($api . '/debug', function ($request, $response) {
+        $debugHtml = file_get_contents(__DIR__ . '/../public/debug.html');
+        $response->getBody()->write($debugHtml);
+        return $response->withHeader('Content-Type', 'text/html');
     });
 };
