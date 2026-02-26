@@ -1,17 +1,14 @@
 <?php
 // Simplified index.php based on working dragons_den pattern
 $localAutoload = __DIR__ . '/../vendor/autoload.php';
-$siblingAutoload = __DIR__ . '/../../backend/vendor/autoload.php';
 $centralAutoload = __DIR__ . '/../../../vendor/autoload.php';
 
-if (file_exists($localAutoload)) {
-    $loader = require $localAutoload;
-} elseif (file_exists($siblingAutoload)) {
-    $loader = require $siblingAutoload;
-} elseif (file_exists($centralAutoload)) {
+if (file_exists($centralAutoload)) {
     $loader = require $centralAutoload;
+} elseif (file_exists($localAutoload)) {
+    $loader = require $localAutoload;
 } else {
-    throw new RuntimeException('Composer autoload.php not found. Checked: ' . $localAutoload . ', ' . $siblingAutoload . ', and ' . $centralAutoload);
+    throw new RuntimeException('Composer autoload.php not found. Checked: ' . $centralAutoload . ' and ' . $localAutoload);
 }
 
 // Ensure autoloader points to the deployed API source directory
