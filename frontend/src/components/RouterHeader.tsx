@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import LoginModal from './LoginModal';
@@ -15,7 +15,6 @@ interface GeneratorType {
 
 const RouterHeader: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
   const [generatorTypes, setGeneratorTypes] = useState<GeneratorType[]>([]);
   const [loading, setLoading] = useState(true);

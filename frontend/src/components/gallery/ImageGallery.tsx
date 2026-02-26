@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, Grid, List, Download, Star } from 'lucide-react';
+import { Filter, Grid, List, Star } from 'lucide-react';
 import { ImageCard } from './ImageCard';
 import { ImageModal } from './ImageModal';
 import { useImageStore } from '../../stores/imageStore';
-import { useSession } from '../../hooks/useSession';
 import type { GeneratedImage, GalleryType } from '../../api/types';
 
 interface ImageGalleryProps {
@@ -27,8 +26,6 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     loadMore,
   } = useImageStore();
 
-  const { addToFavorites, removeFromFavorites } = useSession();
-  
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -52,16 +49,16 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const handleDownload = async (image: GeneratedImage) => {
     try {
       await downloadImage(image);
-    } catch (error) {
+    } catch {
       // Error logged by downloadImage function
     }
   };
 
-  const handleToggleFavorite = async (image: GeneratedImage) => {
+  const handleToggleFavorite = async (_image: GeneratedImage) => {
     try {
       // This would require session/favorites implementation
       // TODO: Implement favorite functionality
-    } catch (error) {
+    } catch {
       // Error would be logged by favorite function
     }
   };

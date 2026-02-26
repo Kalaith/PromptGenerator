@@ -7,7 +7,7 @@ interface TemplateControlsProps {
   availableTemplates: Template[];
   selectedTemplate: Template | null;
   onTemplateChange: (template: Template | null) => void;
-  onTemplateModify?: (template: Template, modifiedData: Record<string, any>) => void;
+  onTemplateModify?: (template: Template, modifiedData: Record<string, unknown>) => void;
   getFocusClasses: (baseColor: string) => string;
 }
 
@@ -20,7 +20,7 @@ export const TemplateControls: React.FC<TemplateControlsProps> = ({
   getFocusClasses,
 }) => {
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
-  const [modifiedTemplateData, setModifiedTemplateData] = useState<Record<string, any>>({});
+  const [modifiedTemplateData, setModifiedTemplateData] = useState<Record<string, unknown>>({});
   const handleTemplateChange = (templateId: string) => {
     if (!templateId || templateId === '') {
       onTemplateChange(null);
@@ -155,7 +155,7 @@ export const TemplateControls: React.FC<TemplateControlsProps> = ({
                         <input
                           id={`template-${key}`}
                           type="text"
-                          value={modifiedTemplateData[key] || ''}
+                          value={String(modifiedTemplateData[key] ?? '')}
                           onChange={(e) => handleTemplateDataChange(key, e.target.value)}
                           placeholder={String(originalValue)}
                           className={`w-full px-3 py-2 text-xs border border-gray-300 rounded-lg

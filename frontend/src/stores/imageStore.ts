@@ -8,8 +8,6 @@ import { useImageStatsStore } from './useImageStatsStore';
 import type { ImageStore } from './imageStoreTypes';
 import { 
   imageStoreUtils, 
-  defaultFilters,
-  defaultPagination,
   imagePersistConfig 
 } from './imageStoreUtils';
 
@@ -21,7 +19,7 @@ import {
 export const useImageStore = create<ImageStore>()(
   subscribeWithSelector(
     persist(
-      (set, get) => ({
+      (set, _get) => ({
         // Initial combined state
         ...imageStoreUtils.createInitialGalleryState(),
         ...imageStoreUtils.createInitialCollectionsState(),

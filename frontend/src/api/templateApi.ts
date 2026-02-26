@@ -133,7 +133,7 @@ export class TemplateApi {
   /**
    * Increment template usage count
    */
-  static async useTemplate(id: number): Promise<void> {
+  static async incrementTemplateUsage(id: number): Promise<void> {
     await apiClient.post<TemplateActionResponse>(`/templates/${id}/use`);
   }
 

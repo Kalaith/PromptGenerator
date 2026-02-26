@@ -1,22 +1,22 @@
-import { useState, useCallback, useMemo } from 'react';
-import { ValidationUtils, ValidationResult } from '../utils/validation';
+import { useState, useCallback } from 'react';
+import { ValidationResult } from '../utils/validation';
 import { AppError } from '../types/errors';
 
-export interface FormField<T = any> {
+export interface FormField<T = unknown> {
   value: T;
   error?: string | undefined;
   touched: boolean;
   validator?: ((value: T) => ValidationResult) | undefined;
 }
 
-export interface FormState<T extends Record<string, any>> {
+export interface FormState<T extends Record<string, unknown>> {
   fields: { [K in keyof T]: FormField<T[K]> };
   isValid: boolean;
   isSubmitting: boolean;
   submitError?: AppError | undefined;
 }
 
-export interface FormActions<T extends Record<string, any>> {
+export interface FormActions<T extends Record<string, unknown>> {
   setField: <K extends keyof T>(field: K, value: T[K]) => void;
   setFieldError: <K extends keyof T>(field: K, error: string) => void;
   touchField: <K extends keyof T>(field: K) => void;
@@ -36,14 +36,14 @@ export interface FormActions<T extends Record<string, any>> {
   };
 }
 
-export interface UseFormStateOptions<T extends Record<string, any>> {
+export interface UseFormStateOptions<T extends Record<string, unknown>> {
   initialValues: T;
   validators?: { [K in keyof T]?: (value: T[K]) => ValidationResult };
   validateOnChange?: boolean;
   validateOnBlur?: boolean;
 }
 
-export function useFormState<T extends Record<string, any>>({
+export function useFormState<T extends Record<string, unknown>>({
   initialValues,
   validators = {},
   validateOnChange = true,
@@ -200,13 +200,6 @@ export function useFormState<T extends Record<string, any>>({
       'aria-describedby': fieldState.error ? `${String(field)}-error` : undefined,
     };
   }, [state.fields, setField, touchField]);
-
-  const formValues = useMemo(() => {
-    return Object.entries(state.fields).reduce((acc, [key, field]) => {
-      acc[key as keyof T] = field.value;
-      return acc;
-    }, {} as T);
-  }, [state.fields]);
 
   return {
     ...state,

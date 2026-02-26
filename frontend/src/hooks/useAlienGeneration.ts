@@ -3,7 +3,7 @@ import { usePromptStore } from '../stores/promptStore';
 import { usePromptGeneration } from './usePromptGeneration';
 import { useSession } from './useSession';
 import { ValidationUtils } from '../utils/validation';
-import type { Template } from '../api/types';
+import type { Template, ApiPrompt, SessionHistoryItem } from '../api';
 
 interface GenerationParams {
   promptCount: number;
@@ -16,17 +16,20 @@ export const useAlienGeneration = () => {
   const { generateAlienPrompts, loading, error, clearError } = usePromptGeneration();
   const { addToHistory } = useSession();
 
-  const addPromptsToHistory = useCallback(async (apiPrompts: any[]) => {
+  const addPromptsToHistory = useCallback(async (apiPrompts: ApiPrompt[]) => {
     for (const prompt of apiPrompts) {
-      try {
-        await addToHistory({
-          id: prompt.id,
+      const historyItem: SessionHistoryItem = {
+        id: String(prompt.id),
+        prompt_text: prompt.description,
+        generator_type: 'alien',
+        created_at: new Date().toISOString(),
+        parameters: {
           title: prompt.title,
-          description: prompt.description,
           tags: prompt.tags,
-          type: 'alien',
-          timestamp: Date.now(),
-        });
+        },
+      };
+      try {
+        await addToHistory(historyItem);
       } catch {
         // Error logged by addToHistory function
       }

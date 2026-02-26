@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Download, Eye, Heart, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Download, Heart, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { GeneratedImage } from '../../api/types';
 
 interface ImageModalProps {

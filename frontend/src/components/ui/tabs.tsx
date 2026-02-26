@@ -12,7 +12,10 @@ export const Tabs: React.FC<TabsProps> = ({ value, onValueChange, children, clas
     <div className={className}>
       {React.Children.map(children, child => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, { 
+          return React.cloneElement(child as React.ReactElement<{
+            activeValue?: string;
+            onValueChange?: (value: string) => void;
+          }>, {
             activeValue: value, 
             onValueChange 
           });
@@ -36,7 +39,10 @@ export const TabsList: React.FC<TabsListProps> = ({ children, className = '', ac
       {React.Children.map(children, child => {
         if (React.isValidElement(child)) {
           const childProps = child.props as { value?: string };
-          return React.cloneElement(child as React.ReactElement<any>, { 
+          return React.cloneElement(child as React.ReactElement<{
+            isSelected?: boolean;
+            onSelect?: () => void;
+          }>, {
             isSelected: activeValue === childProps.value,
             onSelect: () => onValueChange?.(childProps.value || '')
           });
@@ -54,7 +60,7 @@ interface TabsTriggerProps {
   onSelect?: () => void;
 }
 
-export const TabsTrigger: React.FC<TabsTriggerProps> = ({ value, children, isSelected, onSelect }) => {
+export const TabsTrigger: React.FC<TabsTriggerProps> = ({ value: _value, children, isSelected, onSelect }) => {
   return (
     <button
       className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${

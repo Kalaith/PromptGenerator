@@ -34,8 +34,8 @@ export const useAdventurerAttributes = (): UseAdventurerAttributesReturn => {
 
   const clearAttribute = (key: string): void => {
     setSelectedAttributes(prev => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [key]: _removed, ...rest } = prev;
+      const { [key]: removed, ...rest } = prev;
+      void removed;
       return rest;
     });
   };

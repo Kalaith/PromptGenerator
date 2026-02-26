@@ -4,7 +4,7 @@ import { ImageApi } from '../api/imageApi';
 import { TemplateApi } from '../api/templateApi';
 import { apiClient } from '../api/client';
 import type { GeneratePromptsRequest, Template } from '../api/types';
-import type { DescriptionTemplate } from '../api/descriptionTemplateApi';
+import type { SessionHistoryItem } from '../api/types/common';
 import { usePromptGeneration } from './usePromptGeneration';
 import { useSession } from './useSession';
 import { usePromptStore } from '../stores/promptStore';
@@ -119,8 +119,9 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
               const optionsMap: Record<string, Array<{label: string, value: string}>> = {};
               
               // Map the response data to our internal format
-              Object.entries(optionsResponse.data.attributes).forEach(([category, categoryData]: [string, any]) => {
-                optionsMap[category] = categoryData.options || [];
+              Object.entries(optionsResponse.data.attributes).forEach(([category, categoryData]) => {
+                const data = categoryData as { options?: Array<{ label: string; value: string }> };
+                optionsMap[category] = data.options || [];
               });
               
               logger.debug('Loaded attribute options', { 
@@ -176,13 +177,19 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
         
         for (const prompt of apiPrompts) {
           try {
-            await addToHistory({
-              id: prompt.id,
-              title: prompt.title,
-              description: prompt.description,
-              tags: prompt.tags,
-              timestamp: Date.now(),
-            });
+                const historyItem: SessionHistoryItem = {
+                  id: String(prompt.id),
+                  prompt_text: prompt.description,
+                  generator_type: String(config.apiType),
+                  created_at: new Date().toISOString(),
+                  parameters: {
+                    title: prompt.title,
+                    tags: prompt.tags,
+                  },
+                };
+                await addToHistory({
+                  ...historyItem,
+                });
 
             // Queue image generation if enabled
             if (imageGenerationEnabled) {
@@ -193,7 +200,7 @@ export const useUnifiedGenerator = ({ config }: UseUnifiedGeneratorProps) => {
                 
                 if (config.apiType === 'random') {
                   actualGeneratorType = validTypes[Math.floor(Math.random() * validTypes.length)] as typeof validTypes[number];
-                } else if (config.apiType && validTypes.includes(config.apiType as any)) {
+                } else if (config.apiType && (validTypes as readonly string[]).includes(config.apiType)) {
                   actualGeneratorType = config.apiType as typeof validTypes[number];
                 }
                   

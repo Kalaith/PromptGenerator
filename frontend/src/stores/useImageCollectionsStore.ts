@@ -11,7 +11,7 @@ import {
 
 export const useImageCollectionsStore = create<ImageCollectionsStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       // Initial state
       ...imageStoreUtils.createInitialCollectionsState(),
 
@@ -31,7 +31,7 @@ export const useImageCollectionsStore = create<ImageCollectionsStore>()(
           logger.info(`Loaded ${collections.length} collections`);
           
         } catch (error) {
-          const errorMsg = AppErrorHandler.getErrorMessage(error);
+          AppErrorHandler.getErrorMessage(error);
           logger.error('Failed to load collections:', { error: String(error) });
           set({ 
             collectionsLoading: false

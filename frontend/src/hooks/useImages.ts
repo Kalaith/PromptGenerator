@@ -4,8 +4,7 @@ import { useSession } from './useSession';
 import { logger } from '../utils/logger';
 import type { 
   ImageFilters, 
-  QueueImageRequest, 
-  GeneratedImage 
+  QueueImageRequest
 } from '../api/types';
 
 /**
@@ -14,6 +13,7 @@ import type {
  */
 export const useImages = () => {
   const session = useSession();
+  const sessionId = session.sessionId;
   
   // Image store selectors
   const images = useImageStore(state => state.images);
@@ -65,7 +65,7 @@ export const useImages = () => {
   const loadImagesWithSession = useCallback(async (filters?: Partial<ImageFilters>, append = false) => {
     const sessionFilters: ImageFilters = {
       ...filters,
-      session_id: session.sessionId || undefined
+      session_id: sessionId || undefined
     };
     
     try {
@@ -74,10 +74,9 @@ export const useImages = () => {
       logger.error('Failed to load images with session:', { error: String(error) });
       throw error;
     }
-  }, [loadImages, session.sessionId]);
+  }, [loadImages, sessionId]);
 
   const generateImage = useCallback(async (request: Omit<QueueImageRequest, 'session_id'>) => {
-    const {sessionId} = session;
     if (!sessionId) {
       throw new Error('Session ID is required for image generation');
     }
@@ -104,13 +103,13 @@ export const useImages = () => {
       logger.error('Failed to generate image:', { error: String(error) });
       throw error;
     }
-  }, [queueImageGeneration, checkQueueStatus, session.sessionId]);
+  }, [queueImageGeneration, checkQueueStatus, sessionId]);
 
   const refreshQueueStatus = useCallback(async () => {
-    if (session.sessionId) {
-      await checkQueueStatus(session.sessionId);
+    if (sessionId) {
+      await checkQueueStatus(sessionId);
     }
-  }, [checkQueueStatus, session.sessionId]);
+  }, [checkQueueStatus, sessionId]);
 
   // Auto-refresh queue status periodically when there are pending jobs
   useEffect(() => {
@@ -118,7 +117,7 @@ export const useImages = () => {
       item.status === 'pending' || item.status === 'processing'
     );
     
-    if (!hasPendingJobs || !session.sessionId) {
+    if (!hasPendingJobs || !sessionId) {
       return;
     }
     
@@ -127,15 +126,15 @@ export const useImages = () => {
     }, 30000); // Check every 30 seconds
     
     return () => clearInterval(interval);
-  }, [queueItems, refreshQueueStatus, session.sessionId]);
+  }, [queueItems, refreshQueueStatus, sessionId]);
 
   // Filter helpers
   const filterByType = useCallback((type: string) => {
     setFilters({ type, page: 1 });
   }, [setFilters]);
 
-  const filterBySort = useCallback((sort_by: 'recent' | 'popular' | 'views' | 'downloads') => {
-    setFilters({ sort_by, page: 1 });
+  const filterBySort = useCallback((sortBy: 'recent' | 'popular' | 'views' | 'downloads') => {
+    setFilters({ sort_by: sortBy, page: 1 });
   }, [setFilters]);
 
   const toggleFeatured = useCallback(() => {

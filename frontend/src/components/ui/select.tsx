@@ -29,7 +29,6 @@ interface SelectTriggerProps {
 
 export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const context = useContext(SelectContext);
 
   return (
     <>
@@ -80,7 +79,7 @@ const SelectContentProvider: React.FC<SelectContentProviderProps> = ({ children,
     <div className="max-h-60 overflow-auto">
       {React.Children.map(children, child => {
         if (React.isValidElement(child) && child.type === SelectContent) {
-          return React.cloneElement(child as React.ReactElement<any>, { onSelect: handleSelect });
+          return React.cloneElement(child as React.ReactElement<SelectContentProps>, { onSelect: handleSelect });
         }
         return null;
       })}
@@ -101,7 +100,7 @@ export const SelectContent: React.FC<SelectContentProps> = ({ children, onSelect
       {React.Children.map(children, child => {
         if (React.isValidElement(child) && child.type === SelectItem) {
           const itemProps = child.props as { value: string; children: React.ReactNode };
-          return React.cloneElement(child as React.ReactElement<any>, { 
+          return React.cloneElement(child as React.ReactElement<SelectItemProps>, {
             isSelected: context?.value === itemProps.value,
             onSelect: () => onSelect?.(itemProps.value)
           });
@@ -119,7 +118,7 @@ interface SelectItemProps {
   onSelect?: () => void;
 }
 
-export const SelectItem: React.FC<SelectItemProps> = ({ value, children, isSelected, onSelect }) => {
+export const SelectItem: React.FC<SelectItemProps> = ({ value: _value, children, isSelected, onSelect }) => {
   return (
     <div
       className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 ${isSelected ? 'bg-blue-50 text-blue-600' : ''}`}

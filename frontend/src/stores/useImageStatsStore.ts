@@ -11,7 +11,7 @@ import {
 
 export const useImageStatsStore = create<ImageStatsStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       // Initial state
       ...imageStoreUtils.createInitialStatsState(),
 
@@ -30,7 +30,7 @@ export const useImageStatsStore = create<ImageStatsStore>()(
           logger.info('Gallery stats loaded:', { stats });
           
         } catch (error) {
-          const errorMsg = AppErrorHandler.getErrorMessage(error);
+          AppErrorHandler.getErrorMessage(error);
           logger.error('Failed to load gallery stats:', { error: String(error) });
           set({ 
             statsLoading: false

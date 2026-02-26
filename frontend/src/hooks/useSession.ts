@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { SessionApi } from '../api';
 import type { SessionResponse } from '../api';
+import type { SessionHistoryItem } from '../api/types/common';
 import { getSessionId } from '../utils/sessionManager';
 
 interface UseSessionState {
@@ -13,9 +14,9 @@ interface UseSessionState {
 interface UseSessionResult extends UseSessionState {
   addToFavorites: (promptId: string) => Promise<void>;
   removeFromFavorites: (promptId: string) => Promise<void>;
-  addToHistory: (prompt: any) => Promise<void>;
+  addToHistory: (prompt: SessionHistoryItem) => Promise<void>;
   clearHistory: () => Promise<void>;
-  updatePreferences: (preferences: Record<string, any>) => Promise<void>;
+  updatePreferences: (preferences: Record<string, unknown>) => Promise<void>;
   refreshSession: () => Promise<void>;
   clearError: () => void;
 }
@@ -99,7 +100,7 @@ export const useSession = (): UseSessionResult => {
     }
   }, [state.sessionId, setError]);
 
-  const addToHistory = useCallback(async (prompt: any) => {
+  const addToHistory = useCallback(async (prompt: SessionHistoryItem) => {
     try {
       setError(null);
       
@@ -143,7 +144,7 @@ export const useSession = (): UseSessionResult => {
     }
   }, [state.sessionId, setError]);
 
-  const updatePreferences = useCallback(async (preferences: Record<string, any>) => {
+  const updatePreferences = useCallback(async (preferences: Record<string, unknown>) => {
     try {
       setError(null);
       

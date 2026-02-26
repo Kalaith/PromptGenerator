@@ -27,7 +27,7 @@ export class TemplateService {
 
       // Increment template usage count asynchronously
       try {
-        await TemplateApi.useTemplate(template.id);
+        await TemplateApi.incrementTemplateUsage(template.id);
       } catch (usageError) {
         console.warn('Failed to update template usage:', usageError);
         // Continue execution - usage tracking is not critical

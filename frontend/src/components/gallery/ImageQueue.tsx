@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Clock, X, RefreshCw, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { useImageStore } from '../../stores/imageStore';
 import type { QueueStatusItem } from '../../api/types';
@@ -22,8 +22,6 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
     cancelQueueItem,
   } = useImageStore();
 
-  const [refreshTimer, setRefreshTimer] = useState<number | null>(null);
-
   useEffect(() => {
     // Initial load
     fetchQueue();
@@ -36,7 +34,6 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
         fetchQueue();
       }, refreshInterval);
       
-      setRefreshTimer(timer);
     }
     
     return () => {
@@ -54,7 +51,7 @@ export const ImageQueue: React.FC<ImageQueueProps> = ({
     try {
       await cancelQueueItem(queueId);
       fetchQueue(); // Refresh after cancellation
-    } catch (error) {
+    } catch {
       // Error logged by cancelQueueItem function
     }
   };
