@@ -30,11 +30,7 @@ export const defaultPagination = {
 // Persistence configuration
 export const imagePersistConfig = {
   name: APP_CONSTANTS.STORAGE.IMAGE_STORE_NAME || 'anime-prompt-gen-images',
-  partialize: (state: {
-    preferences: ImageState['preferences'];
-    viewMode: ImageState['viewMode'];
-    currentFilters: ImageState['currentFilters'];
-  }) => ({
+  partialize: (state: ImageState) => ({
     preferences: state.preferences,
     viewMode: state.viewMode,
     currentFilters: state.currentFilters

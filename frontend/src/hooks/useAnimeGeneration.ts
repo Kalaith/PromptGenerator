@@ -98,11 +98,15 @@ export function useAnimeGeneration(): UseAnimeGenerationResult {
         apiPrompts.forEach(async (prompt) => {
           try {
             await addToHistory({
-              id: prompt.id,
-              title: prompt.title,
-              description: prompt.description,
-              type: prompt.prompt_type,
-              timestamp: new Date().toISOString(),
+              id: String(prompt.id),
+              prompt_text: prompt.description,
+              generator_type: 'anime',
+              created_at: new Date().toISOString(),
+              parameters: {
+                title: prompt.title,
+                tags: prompt.tags,
+                prompt_type: prompt.prompt_type,
+              },
             });
           } catch (historyError) {
             console.warn('Failed to add to history:', historyError);

@@ -12,7 +12,7 @@ import {
 } from './imageStoreUtils';
 
 export const useImageGalleryStore = create<ImageGalleryStore>()(
-  persist(
+  persist<ImageGalleryStore>(
     (set, get) => ({
       // Initial state
       ...imageStoreUtils.createInitialGalleryState(),

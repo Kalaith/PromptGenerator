@@ -18,7 +18,7 @@ import {
  */
 export const useImageStore = create<ImageStore>()(
   subscribeWithSelector(
-    persist(
+    persist<ImageStore>(
       (set, _get) => ({
         // Initial combined state
         ...imageStoreUtils.createInitialGalleryState(),

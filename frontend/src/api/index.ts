@@ -10,6 +10,7 @@ export { ImageApi } from './imageApi';
 export type { ApiResponse } from './client';
 export type {
   ApiPrompt,
+  SessionHistoryItem,
   GeneratePromptsRequest,
   GenerateAlienRequest,
   GenerateAdventurerRequest,

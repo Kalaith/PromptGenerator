@@ -49,15 +49,21 @@ export function useFormState<T extends Record<string, unknown>>({
   validateOnChange = true,
   validateOnBlur = true,
 }: UseFormStateOptions<T>): FormState<T> & FormActions<T> {
-  const [state, setState] = useState<FormState<T>>(() => ({
-    fields: Object.entries(initialValues).reduce((acc, [key, value]) => {
-      acc[key as keyof T] = {
-        value,
+  const buildInitialFields = useCallback((): FormState<T>['fields'] => {
+    const fields = {} as FormState<T>['fields'];
+    for (const key in initialValues) {
+      const typedKey = key as keyof T;
+      fields[typedKey] = {
+        value: initialValues[typedKey],
         touched: false,
-        validator: validators[key as keyof T],
+        validator: validators[typedKey],
       };
-      return acc;
-    }, {} as FormState<T>['fields']),
+    }
+    return fields;
+  }, [initialValues, validators]);
+
+  const [state, setState] = useState<FormState<T>>(() => ({
+    fields: buildInitialFields(),
     isValid: true,
     isSubmitting: false,
   }));
@@ -168,18 +174,11 @@ export function useFormState<T extends Record<string, unknown>>({
 
   const resetForm = useCallback(() => {
     setState({
-      fields: Object.entries(initialValues).reduce((acc, [key, value]) => {
-        acc[key as keyof T] = {
-          value,
-          touched: false,
-          validator: validators[key as keyof T],
-        };
-        return acc;
-      }, {} as FormState<T>['fields']),
+      fields: buildInitialFields(),
       isValid: true,
       isSubmitting: false,
     });
-  }, [initialValues, validators]);
+  }, [buildInitialFields]);
 
   const setSubmitting = useCallback((submitting: boolean) => {
     setState(prev => ({ ...prev, isSubmitting: submitting }));

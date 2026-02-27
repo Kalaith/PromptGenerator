@@ -67,7 +67,7 @@ export const usePromptStore = create<PromptStore>()(
       },
 
       // Actions
-      addGeneratedPrompts: (apiPrompts: ApiPrompt[]): void =>
+      addGeneratedPrompts: (apiPrompts: ApiPrompt[]): void => {
         set((state) => {
           const convertedPrompts = apiPrompts.map(convertApiPrompt);
           const newPrompts = filterNewPrompts(convertedPrompts, state.generatedPrompts);
@@ -80,37 +80,46 @@ export const usePromptStore = create<PromptStore>()(
             generatedPrompts: [...state.generatedPrompts, ...newPrompts],
             localHistory: updatedHistory,
           };
-        }),
+        });
+      },
 
-      setCurrentPrompt: (prompt: Prompt | null): void => set({ currentPrompt: prompt }),
+      setCurrentPrompt: (prompt: Prompt | null): void => {
+        set({ currentPrompt: prompt });
+      },
 
       // Local state management (for offline fallback)
-      addToLocalFavorites: (promptId: string): void =>
+      addToLocalFavorites: (promptId: string): void => {
         set((state) => ({
           localFavorites: state.localFavorites.includes(promptId)
             ? state.localFavorites
             : [...state.localFavorites, promptId],
-        })),
+        }));
+      },
 
-      removeFromLocalFavorites: (promptId: string): void =>
+      removeFromLocalFavorites: (promptId: string): void => {
         set((state) => ({
           localFavorites: state.localFavorites.filter((id) => id !== promptId),
-        })),
+        }));
+      },
 
-      updateLocalPreferences: (newPreferences: Partial<PromptState['localPreferences']>): void =>
+      updateLocalPreferences: (newPreferences: Partial<PromptState['localPreferences']>): void => {
         set((state) => ({
           localPreferences: { ...state.localPreferences, ...newPreferences },
-        })),
+        }));
+      },
 
-      clearLocalHistory: (): void => set({ localHistory: [], generatedPrompts: [] }),
+      clearLocalHistory: (): void => {
+        set({ localHistory: [], generatedPrompts: [] });
+      },
 
-      clearAll: (): void =>
+      clearAll: (): void => {
         set({
           generatedPrompts: [],
           localFavorites: [],
           localHistory: [],
           currentPrompt: null,
-        }),
+        });
+      },
 
       // Utility methods
       convertApiPrompts: (apiPrompts: ApiPrompt[]): Prompt[] => apiPrompts.map(convertApiPrompt),

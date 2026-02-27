@@ -13,6 +13,13 @@ interface GeneratorType {
   sort_order: number;
 }
 
+interface GeneratorTypesResponse {
+  success: boolean;
+  data?: {
+    generator_types?: GeneratorType[];
+  };
+}
+
 const RouterHeader: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
@@ -35,10 +42,10 @@ const RouterHeader: React.FC = () => {
   useEffect(() => {
     const fetchGeneratorTypes = async () => {
       try {
-        const response = await apiClient.get('/generator-types');
+        const response = await apiClient.get<GeneratorTypesResponse>('/generator-types');
         
         if (response.success) {
-          setGeneratorTypes(response.data.generator_types || []);
+          setGeneratorTypes(response.data?.generator_types || []);
         }
       } catch (err) {
         console.error('Error fetching generator types:', err);

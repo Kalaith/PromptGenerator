@@ -9,6 +9,13 @@ interface GeneratorType {
   is_active: boolean;
 }
 
+interface GeneratorTypesResponse {
+  success: boolean;
+  data?: {
+    generator_types?: GeneratorType[];
+  };
+}
+
 interface AttributeFormProps {
   newAttribute: NewAttributeData;
   onAttributeChange: (attribute: NewAttributeData) => void;
@@ -29,10 +36,10 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   useEffect(() => {
     const fetchGeneratorTypes = async () => {
       try {
-        const response = await apiClient.get('/generator-types');
+        const response = await apiClient.get<GeneratorTypesResponse>('/generator-types');
         
         if (response.success) {
-          setGeneratorTypes(data.data.generator_types || []);
+          setGeneratorTypes(response.data?.generator_types || []);
         } else {
           setError('Failed to load generator types');
         }
