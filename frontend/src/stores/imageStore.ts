@@ -8,7 +8,8 @@ import { useImageStatsStore } from './useImageStatsStore';
 import type { ImageStore } from './imageStoreTypes';
 import { 
   imageStoreUtils, 
-  imagePersistConfig 
+  imagePersistConfig,
+  imageStorePartialize
 } from './imageStoreUtils';
 
 /**
@@ -18,7 +19,7 @@ import {
  */
 export const useImageStore = create<ImageStore>()(
   subscribeWithSelector(
-    persist<ImageStore>(
+    persist(
       (set, _get) => ({
         // Initial combined state
         ...imageStoreUtils.createInitialGalleryState(),
@@ -72,7 +73,10 @@ export const useImageStore = create<ImageStore>()(
           });
         }
       }),
-      imagePersistConfig
+      {
+        ...imagePersistConfig,
+        partialize: imageStorePartialize
+      }
     )
   )
 );

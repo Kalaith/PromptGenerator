@@ -16,6 +16,7 @@ export const useImageGalleryStore = create<ImageGalleryStore>()(
     (set, get) => ({
       // Initial state
       ...imageStoreUtils.createInitialGalleryState(),
+      ...imageStoreUtils.createInitialPreferencesState(),
 
       // Gallery image loading actions
       loadImages: async (filters: Partial<ImageFilters> = {}, append = false): Promise<void> => {

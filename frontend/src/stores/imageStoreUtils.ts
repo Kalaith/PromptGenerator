@@ -1,6 +1,6 @@
 import { APP_CONSTANTS } from '../constants/app';
 import type { ImageFilters, GeneratedImage } from '../api/types';
-import type { ImageState } from './imageStoreTypes';
+import type { ImageState, ImageStore } from './imageStoreTypes';
 
 // Default filters configuration
 export const defaultFilters: ImageFilters = {
@@ -29,13 +29,16 @@ export const defaultPagination = {
 
 // Persistence configuration
 export const imagePersistConfig = {
-  name: APP_CONSTANTS.STORAGE.IMAGE_STORE_NAME || 'anime-prompt-gen-images',
-  partialize: (state: ImageState) => ({
-    preferences: state.preferences,
-    viewMode: state.viewMode,
-    currentFilters: state.currentFilters
-  }),
+  name: APP_CONSTANTS.STORAGE.IMAGE_STORE_NAME || 'anime-prompt-gen-images'
 };
+
+type ImagePersistedState = Pick<ImageStore, 'preferences' | 'viewMode' | 'currentFilters'>;
+
+export const imageStorePartialize = (state: ImageStore): ImagePersistedState => ({
+  preferences: state.preferences,
+  viewMode: state.viewMode,
+  currentFilters: state.currentFilters
+});
 
 // Utility functions
 export const imageStoreUtils = {
