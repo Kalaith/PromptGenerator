@@ -10,3 +10,5 @@ service/logs/service.pid
 frontend/.env.production
 backend/.env.preview
 nul
+
+**/.env*
