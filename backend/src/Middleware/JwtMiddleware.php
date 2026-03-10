@@ -11,7 +11,7 @@ use Firebase\JWT\Key;
 
 final class JwtMiddleware
 {
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $routeParams): bool
+    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $routeParams): ServerRequestInterface|bool
     {
         $authorization = $request->getHeaderLine('Authorization');
 
@@ -36,8 +36,18 @@ final class JwtMiddleware
 
         try {
             $decoded = JWT::decode($token, new Key($secret, 'HS256'));
-            // Store user_id in request attributes
-            return true; // Allow request to continue
+            $isGuest = (bool) ($decoded->is_guest ?? false) || (($decoded->auth_type ?? 'frontpage') === 'guest');
+            return $request
+                ->withAttribute('user_id', (string) ($decoded->user_id ?? $decoded->sub))
+                ->withAttribute('user', [
+                    'id' => (string) ($decoded->user_id ?? $decoded->sub),
+                    'email' => (string) ($decoded->email ?? ''),
+                    'username' => (string) ($decoded->username ?? ''),
+                    'display_name' => (string) ($decoded->display_name ?? ($decoded->username ?? 'User')),
+                    'role' => $isGuest ? 'guest' : (string) ($decoded->role ?? 'user'),
+                    'is_guest' => $isGuest,
+                    'auth_type' => $isGuest ? 'guest' : 'frontpage',
+                ]);
         } catch (\Throwable $e) {
             $response->getBody()->write(json_encode([
                 'success' => false,

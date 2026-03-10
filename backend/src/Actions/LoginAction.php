@@ -31,7 +31,13 @@ final class LoginAction
 
         $payload = [
             'sub' => $user['id'],
+            'user_id' => $user['id'],
             'email' => $user['email'],
+            'username' => $user['username'] ?? explode('@', $user['email'])[0],
+            'display_name' => $user['display_name'] ?? ($user['username'] ?? explode('@', $user['email'])[0]),
+            'role' => 'user',
+            'auth_type' => 'frontpage',
+            'is_guest' => false,
             'iat' => time(),
             'exp' => time() + (24 * 60 * 60)
         ];
@@ -40,7 +46,11 @@ final class LoginAction
             'token' => JWT::encode($payload, $secret, 'HS256'),
             'user' => [
                 'id' => $user['id'],
-                'email' => $user['email']
+                'email' => $user['email'],
+                'display_name' => $user['display_name'] ?? ($user['username'] ?? explode('@', $user['email'])[0]),
+                'username' => $user['username'] ?? explode('@', $user['email'])[0],
+                'is_guest' => false,
+                'auth_type' => 'frontpage',
             ]
         ];
     }

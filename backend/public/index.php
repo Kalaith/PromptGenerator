@@ -1,7 +1,7 @@
 <?php
 // Simplified index.php based on working dragons_den pattern
+$centralAutoload = __DIR__ . '/../../../../vendor/autoload.php';
 $localAutoload = __DIR__ . '/../vendor/autoload.php';
-$centralAutoload = __DIR__ . '/../../../vendor/autoload.php';
 
 if (file_exists($centralAutoload)) {
     $loader = require $centralAutoload;

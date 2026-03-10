@@ -51,6 +51,9 @@ return function (Router $router): void {
     // Auth routes (central login system)
     $router->post($api . '/auth/register', [AuthController::class, 'register']);
     $router->post($api . '/auth/login', [AuthController::class, 'login']);
+    $router->post($api . '/auth/guest-session', [AuthController::class, 'createGuestSession']);
+    $router->get($api . '/auth/current-user', [AuthController::class, 'currentUser'], [JwtMiddleware::class]);
+    $router->post($api . '/auth/link-guest', [AuthController::class, 'linkGuestAccount'], [JwtMiddleware::class]);
 
     // Species routes
     $router->get($api . '/species', [SpeciesController::class, 'getAll']);
@@ -196,6 +199,9 @@ return function (Router $router): void {
     // Auth routes (central login system)
     $router->post('/auth/register', [AuthController::class, 'register']);
     $router->post('/auth/login', [AuthController::class, 'login']);
+    $router->post('/auth/guest-session', [AuthController::class, 'createGuestSession']);
+    $router->get('/auth/current-user', [AuthController::class, 'currentUser'], [JwtMiddleware::class]);
+    $router->post('/auth/link-guest', [AuthController::class, 'linkGuestAccount'], [JwtMiddleware::class]);
 
     // Attribute configuration management (direct access)
     $router->get('/attribute-config', [AttributeConfigController::class, 'getConfigs'], [JwtMiddleware::class]);

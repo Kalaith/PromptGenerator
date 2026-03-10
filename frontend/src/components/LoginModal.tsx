@@ -7,7 +7,7 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const { login, register } = useAuth();
+  const { login, register, continueAsGuest, getLinkAccountUrl } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,6 +91,27 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           </button>
         </form>
 
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={async () => {
+              setLoading(true);
+              setError('');
+              try {
+                await continueAsGuest();
+                onClose();
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'An error occurred');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-2 px-4 rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 transition-all duration-200"
+          >
+            Continue as Guest
+          </button>
+        </div>
+
         <div className="mt-4 text-center">
           <button
             onClick={() => setIsLogin(!isLogin)}
@@ -101,6 +122,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="mt-4 text-center">
+          <a
+            href={getLinkAccountUrl()}
+            className="block text-violet-600 hover:text-violet-800 text-sm underline mb-3"
+          >
+            Sign up and link guest work
+          </a>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-sm"

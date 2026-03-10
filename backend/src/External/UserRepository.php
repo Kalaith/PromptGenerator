@@ -8,6 +8,12 @@ use AnimePromptGen\Models\User;
 
 final class UserRepository
 {
+    public function findById(string $id): ?array
+    {
+        $user = User::find($id);
+        return $user ? $user->toArray() : null;
+    }
+
     public function findByEmail(string $email): ?array
     {
         $user = User::where('email', $email)->first();
@@ -18,5 +24,16 @@ final class UserRepository
     {
         $user = User::create($data);
         return $user->toArray();
+    }
+
+    public function update(string $id, array $data): ?array
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return null;
+        }
+
+        $user->update($data);
+        return $user->fresh()->toArray();
     }
 }

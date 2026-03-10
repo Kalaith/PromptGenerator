@@ -94,6 +94,9 @@ final class Router
                     if ($result === false) {
                         return;
                     }
+                    if ($result instanceof ServerRequestInterface) {
+                        $request = $result;
+                    }
                 }
 
                 try {
