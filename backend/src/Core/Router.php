@@ -89,9 +89,16 @@ final class Router
 
                 $middlewares = array_merge($this->globalMiddleware, $route['middleware']);
                 foreach ($middlewares as $mw) {
-                    $mwInstance = is_string($mw) ? new $mw() : $mw;
+                    $mwInstance = is_string($mw)
+                        ? ($this->container ? $this->container->get($mw) : new $mw())
+                        : $mw;
                     $result = $mwInstance($request, $response, $routeParams);
+                    if ($result instanceof ResponseInterface) {
+                        $this->emit($this->withCors($result));
+                        return;
+                    }
                     if ($result === false) {
+                        $this->emit($this->withCors($response));
                         return;
                     }
                     if ($result instanceof ServerRequestInterface) {
@@ -102,6 +109,7 @@ final class Router
                 try {
                     $response = $this->invokeHandler($route['handler'], $request, $response, $routeParams);
                 } catch (Throwable $e) {
+                    error_log('AnimePromptGen API error: ' . $e->getMessage());
                     $response = $this->writeJson($response->withStatus(500), [
                         'success' => false,
                         'error' => 'Internal server error'

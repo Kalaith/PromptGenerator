@@ -24,8 +24,6 @@ use AnimePromptGen\Actions\GetAttributeOptionsByCategoryAction;
 use AnimePromptGen\Actions\CreateAttributeOptionAction;
 use AnimePromptGen\Actions\UpdateAttributeOptionAction;
 use AnimePromptGen\Actions\DeleteAttributeOptionAction;
-use AnimePromptGen\Actions\LoginAction;
-use AnimePromptGen\Actions\RegisterAction;
 use AnimePromptGen\Actions\GetGeneratorAttributesAction;
 use AnimePromptGen\Actions\GeneratePromptsAction;
 use AnimePromptGen\Actions\GenerateAdventurerAction;
@@ -87,9 +85,6 @@ return [
     CreateAttributeOptionAction::class => \DI\autowire(),
     UpdateAttributeOptionAction::class => \DI\autowire(),
     DeleteAttributeOptionAction::class => \DI\autowire(),
-    LoginAction::class => \DI\autowire(),
-    RegisterAction::class => \DI\autowire(),
-
     // Controllers
     PromptController::class => \DI\autowire(),
     AdventurerController::class => \DI\autowire(),

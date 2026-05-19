@@ -1,14 +1,34 @@
 <?php
-// Simplified index.php based on working dragons_den pattern
-$centralAutoload = __DIR__ . '/../../../../vendor/autoload.php';
-$localAutoload = __DIR__ . '/../vendor/autoload.php';
 
-if (file_exists($centralAutoload)) {
-    $loader = require $centralAutoload;
-} elseif (file_exists($localAutoload)) {
-    $loader = require $localAutoload;
-} else {
-    throw new RuntimeException('Composer autoload.php not found. Checked: ' . $centralAutoload . ' and ' . $localAutoload);
+declare(strict_types=1);
+
+$autoloadCandidates = [];
+$searchDir = __DIR__;
+for ($i = 0; $i < 8; $i++) {
+    $autoloadCandidates[] = $searchDir . '/vendor/autoload.php';
+    $parent = dirname($searchDir);
+    if ($parent === $searchDir) {
+        break;
+    }
+    $searchDir = $parent;
+}
+
+$autoloadCandidates[] = __DIR__ . '/../vendor/autoload.php';
+$autoloadCandidates[] = __DIR__ . '/../../vendor/autoload.php';
+$autoloadCandidates[] = __DIR__ . '/../../../vendor/autoload.php';
+$autoloadCandidates[] = __DIR__ . '/../../../../vendor/autoload.php';
+$autoloadCandidates[] = 'H:/WebHatchery/vendor/autoload.php';
+
+$loader = null;
+foreach (array_unique($autoloadCandidates) as $candidate) {
+    if (file_exists($candidate)) {
+        $loader = require $candidate;
+        break;
+    }
+}
+
+if ($loader === null) {
+    throw new RuntimeException('Composer autoload.php not found for anime_prompt_gen backend.');
 }
 
 // Ensure autoloader points to the deployed API source directory
@@ -24,6 +44,19 @@ use AnimePromptGen\Core\Router;
 // Load environment variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
+
+$requiredEnv = static function (string $name): string {
+    $value = $_ENV[$name] ?? $_SERVER[$name] ?? getenv($name);
+    if (!is_string($value) || trim($value) === '') {
+        throw new RuntimeException("Missing required environment variable: {$name}");
+    }
+
+    return $value;
+};
+
+foreach (['JWT_SECRET', 'JWT_EXPIRATION', 'WEBHATCHERY_LOGIN_URL'] as $requiredEnvName) {
+    $requiredEnv($requiredEnvName);
+}
 
 // Initialize database connection (direct like dragons_den)
 $capsule = new Capsule;

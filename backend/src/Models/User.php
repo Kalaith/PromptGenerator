@@ -3,7 +3,6 @@
 namespace AnimePromptGen\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 class User extends Model
 {
@@ -13,6 +12,7 @@ class User extends Model
     protected $keyType = 'string';
     
     protected $fillable = [
+        'id',
         'email',
         'password_hash',
         'username',
@@ -44,7 +44,7 @@ class User extends Model
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = (string) Str::uuid();
+                $model->id = self::generateId();
             }
             
             // Set default values for new users
@@ -73,8 +73,13 @@ class User extends Model
         parent::__construct($attributes);
         
         if (empty($this->id)) {
-            $this->id = (string) Str::uuid();
+            $this->id = self::generateId();
         }
+    }
+
+    private static function generateId(): string
+    {
+        return 'usr_' . bin2hex(random_bytes(16));
     }
 
     /**

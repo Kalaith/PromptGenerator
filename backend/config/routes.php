@@ -48,9 +48,8 @@ return function (Router $router): void {
     $router->post($api . '/session/history/clear', [UserSessionController::class, 'clearHistory']);
     $router->post($api . '/session/preferences', [UserSessionController::class, 'updatePreferences']);
 
-    // Auth routes (central login system)
-    $router->post($api . '/auth/register', [AuthController::class, 'register']);
-    $router->post($api . '/auth/login', [AuthController::class, 'login']);
+    // Auth routes (shared WebHatchery login)
+    $router->get($api . '/auth/login-info', [AuthController::class, 'loginInfo']);
     $router->post($api . '/auth/guest-session', [AuthController::class, 'createGuestSession']);
     $router->get($api . '/auth/current-user', [AuthController::class, 'currentUser'], [JwtMiddleware::class]);
     $router->post($api . '/auth/link-guest', [AuthController::class, 'linkGuestAccount'], [JwtMiddleware::class]);
@@ -196,9 +195,8 @@ return function (Router $router): void {
     $router->post('/session/history/clear', [UserSessionController::class, 'clearHistory']);
     $router->post('/session/preferences', [UserSessionController::class, 'updatePreferences']);
 
-    // Auth routes (central login system)
-    $router->post('/auth/register', [AuthController::class, 'register']);
-    $router->post('/auth/login', [AuthController::class, 'login']);
+    // Auth routes (shared WebHatchery login)
+    $router->get('/auth/login-info', [AuthController::class, 'loginInfo']);
     $router->post('/auth/guest-session', [AuthController::class, 'createGuestSession']);
     $router->get('/auth/current-user', [AuthController::class, 'currentUser'], [JwtMiddleware::class]);
     $router->post('/auth/link-guest', [AuthController::class, 'linkGuestAccount'], [JwtMiddleware::class]);

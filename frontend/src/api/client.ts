@@ -54,13 +54,9 @@ class ApiClient {
       headers['Content-Type'] = 'application/json';
     }
     
-    // Add Authorization header if token exists
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    const token = this.readStoredAuthToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('API Client: Adding Authorization header with token:', token.substring(0, 20) + '...');
-    } else {
-      console.log('API Client: No auth token found');
     }
     
     // Add other headers if specified
@@ -120,6 +116,37 @@ class ApiClient {
     }
     
     throw AppErrorHandler.fromApiError(error);
+  }
+
+  private readStoredAuthToken(): string | null {
+    const directToken = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    if (directToken) {
+      return directToken;
+    }
+
+    const frontpageAuth = localStorage.getItem('auth-storage');
+    if (frontpageAuth) {
+      try {
+        const parsed = JSON.parse(frontpageAuth) as { state?: { token?: string | null } };
+        if (parsed.state?.token) {
+          return parsed.state.token;
+        }
+      } catch {
+        // Ignore malformed shared auth storage and check the app guest session below.
+      }
+    }
+
+    const guestAuth = localStorage.getItem('anime-prompt-gen-guest-session');
+    if (guestAuth) {
+      try {
+        const parsed = JSON.parse(guestAuth) as { token?: string | null };
+        return parsed.token || null;
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
   }
 
   async get<T>(endpoint: string): Promise<T> {

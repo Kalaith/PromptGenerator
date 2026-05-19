@@ -7,6 +7,16 @@ This project is a versatile prompt generator designed to create random image pro
 - Export prompts in JSON format for bulk image creation.
 - Customizable and extendable prompt generation logic.
 
+## Authentication
+Management endpoints use shared WebHatchery bearer-token authentication. The app does not expose local login or registration endpoints. Unauthenticated protected API requests return HTTP 401 with `login_url`, and users can either sign in through `https://webhatchery.au/login` or continue with a signed guest JWT.
+
+Required auth environment variables:
+- `JWT_SECRET`
+- `JWT_EXPIRATION`
+- `WEBHATCHERY_LOGIN_URL`
+- `VITE_WEBHATCHERY_LOGIN_URL`
+- `VITE_WEBHATCHERY_SIGNUP_URL`
+
 ## Frontend Overview
 The frontend is built using modern web technologies:
 - **React**: For building the user interface.
